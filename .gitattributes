@@ -1,0 +1,3 @@
+# Hide from GitHub language stats
+*.css linguist-vendored
+*.html linguist-vendored
