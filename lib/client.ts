@@ -39,8 +39,20 @@ export class OllamaClient {
       body: JSON.stringify({ name }),
       headers: { "Content-Type": "application/json" },
     });
-    if (!res.ok) throw new Error("Failed to delete model");
-    return res.json();
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to delete model: ${errText}`);
+    }
+
+    const text = await res.text();
+    if (!text) return { success: true }; // empty response = success
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { success: true }; // fallback if non-JSON response
+    }
   }
 
   static async showModel({
