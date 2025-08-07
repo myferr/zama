@@ -1,0 +1,96 @@
+import type {
+  ChatRequest,
+  ChatResponse,
+  PullModelRequest,
+  DeleteModelRequest,
+  ShowModelRequest,
+  ShowModelResponse,
+  ListModelsResponse,
+  ConfigResponse,
+} from "./schemas/client.schema";
+
+const OLLAMA_BASE = "http://localhost:11434";
+
+export class OllamaClient {
+  static async listModels(): Promise<ListModelsResponse> {
+    const res = await fetch(`${OLLAMA_BASE}/api/tags`);
+    if (!res.ok) throw new Error("Failed to list models");
+    return res.json();
+  }
+
+  static async pullModel({
+    name,
+    stream = false,
+  }: PullModelRequest): Promise<Response> {
+    const res = await fetch(`${OLLAMA_BASE}/api/pull`, {
+      method: "POST",
+      body: JSON.stringify({ name, stream }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error("Failed to pull model");
+    return res;
+  }
+
+  static async deleteModel({
+    name,
+  }: DeleteModelRequest): Promise<{ success: boolean }> {
+    const res = await fetch(`${OLLAMA_BASE}/api/delete`, {
+      method: "DELETE",
+      body: JSON.stringify({ name }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error("Failed to delete model");
+    return res.json();
+  }
+
+  static async showModel({
+    name,
+  }: ShowModelRequest): Promise<ShowModelResponse> {
+    const res = await fetch(`${OLLAMA_BASE}/api/show`, {
+      method: "POST",
+      body: JSON.stringify({ name }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error("Failed to show model");
+    return res.json();
+  }
+
+  static async getConfig(): Promise<ConfigResponse> {
+    const res = await fetch(`${OLLAMA_BASE}/api/config`);
+    if (!res.ok) throw new Error("Failed to get config");
+    return res.json();
+  }
+
+  static async chat(request: ChatRequest): Promise<ChatResponse[]> {
+    const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) throw new Error("Chat request failed");
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No response body to read from");
+
+    const decoder = new TextDecoder();
+    const messages: ChatResponse[] = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      for (const line of chunk.split("\n")) {
+        if (!line.trim()) continue;
+        try {
+          const parsed: ChatResponse = JSON.parse(line);
+          messages.push(parsed);
+        } catch {
+          // Ignore malformed lines (if any)
+        }
+      }
+    }
+
+    return messages;
+  }
+}
