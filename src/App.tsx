@@ -9,15 +9,19 @@ import {
 } from "@/components/ui/select";
 import ChatPage from "@/pages/ChatPage";
 import ModelsPage from "@/pages/ModelsPage";
-import { ComponentChildren } from "preact";
+import { ComponentChildren, JSX } from "preact";
 import { OllamaClient } from "../lib/client";
 import type { OllamaModel } from "$/lib/schemas/client.schema";
 import LibraryPage from "@/pages/LibraryPage";
 
+import { VscLibrary } from "react-icons/vsc";
+import { SiRobotframework } from "react-icons/si";
+import { MdChatBubbleOutline } from "react-icons/md";
+
 interface PageConfig {
   id: string;
   name: string;
-  icon: string;
+  icon: ComponentChildren;
   component: ComponentChildren;
 }
 
@@ -25,19 +29,19 @@ const pageConfigs: PageConfig[] = [
   {
     id: "chat",
     name: "Chat",
-    icon: "🗨️",
+    icon: <MdChatBubbleOutline />,
     component: <ChatPage />,
   },
   {
     id: "models",
     name: "Your Models",
-    icon: "⚙️",
+    icon: <SiRobotframework />,
     component: <ModelsPage />,
   },
   {
     id: "library",
     name: "Library",
-    icon: "📕",
+    icon: <VscLibrary />,
     component: <LibraryPage />,
   },
 ];
@@ -91,12 +95,12 @@ export default function App() {
     <div className="flex h-screen text-white bg-background">
       {/* Left Sidebar */}
       <aside className="w-56 bg-card p-4 border-r border-border">
-        <h2 className="text-lg font-semibold mb-4">Navigation</h2>
+        <h2 className="text-lg font-semibold mb-4">zama</h2>
         {pageConfigs.map((p) => (
           <Button
             key={p.id}
             variant={page === p.id ? "secondary" : "ghost"}
-            className="w-full mb-2"
+            className="w-full mb-2 text-left justify-start"
             onClick={() => setPage(p.id)}
           >
             {p.icon} {p.name}
@@ -107,7 +111,7 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="h-14 bg-card border-b border-border px-4 flex items-center justify-between">
+        <header className="h-10 bg-card border-b border-border px-4 flex items-center justify-between">
           <div className="flex justify-center items-center flex-1">
             <span className="text-sm font-mono font-semibold">
               {loadedModel?.name}
