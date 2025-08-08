@@ -8,6 +8,7 @@ import type {
   ListModelsResponse,
   ConfigResponse,
 } from "./schemas/client.schema";
+import { invoke } from "@tauri-apps/api/core";
 
 const OLLAMA_BASE = "http://localhost:11434";
 
@@ -18,52 +19,13 @@ export class OllamaClient {
     return res.json();
   }
 
-  static async pullModel({
-    name,
-    stream = false,
-  }: PullModelRequest): Promise<Response> {
-    const { spawn } = await import("child_process");
-    const { promisify } = await import("util");
-
-    return new Promise((resolve, reject) => {
-      const args = ["pull", name];
-      const ollama = spawn("ollama", args);
-
-      let stdout = "";
-      let stderr = "";
-
-      ollama.stdout?.on("data", (data) => {
-        stdout += data.toString();
-      });
-
-      ollama.stderr?.on("data", (data) => {
-        stderr += data.toString();
-      });
-
-      ollama.on("close", (code) => {
-        if (code !== 0) {
-          reject(new Error(`Failed to pull model: ${stderr}`));
-          return;
-        }
-
-        // Create a mock Response object to maintain API compatibility
-        const mockResponse = {
-          ok: true,
-          status: 200,
-          statusText: "OK",
-          json: async () => ({ success: true }),
-          text: async () => stdout,
-          body: null,
-          headers: new Headers(),
-        } as Response;
-
-        resolve(mockResponse);
-      });
-
-      ollama.on("error", (error) => {
-        reject(new Error(`Failed to pull model: ${error.message}`));
-      });
-    });
+  static async pullModel({ name }: PullModelRequest): Promise<string> {
+    try {
+      const response = await invoke<string>("pull_model", { modelName: name });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to pull model: ${error}`);
+    }
   }
 
   static async deleteModel({

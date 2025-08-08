@@ -3,6 +3,8 @@ import { useEffect, useState } from "preact/hooks";
 import { OllamaDBModel } from "$/lib/schemas/ollamadb.schema";
 import { invoke } from "@tauri-apps/api/core";
 import { Input } from "@/components/ui/input";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 import { SiOllama } from "react-icons/si";
 import { BiBadgeCheck } from "react-icons/bi";
@@ -88,8 +90,7 @@ export default function LibraryPage() {
               <div className="justify-between flex">
                 <div className="flex gap-2.5 items-center">
                   <h2 className="text-lg font-semibold">
-                    {model.model_name}{" "}
-                    {pullingModel === model.model_name && "Installing..."}
+                    {model.model_name}
                   </h2>
                   <a href={model.url} target="_blank">
                     <SiOllama />
@@ -106,13 +107,35 @@ export default function LibraryPage() {
                     } hover:bg-accent rounded p-1.5}`}
                     onClick={async () => {
                       setPullingModel(model.model_name);
-                      await OllamaClient.pullModel({ name: model.model_name });
-                      setPullingModel(null);
-                      // Refresh installed models after successful pull
-                      const installed = await OllamaClient.listModels();
-                      setInstalledModels(
-                        new Set(installed.models.map((m) => m.name)),
-                      );
+                      const toastId = toast.loading(`Installing ${model.model_name}...`, {
+                        action: {
+                          label: "Cancel",
+                          onClick: () => {
+                            // TODO: Implement actual cancellation logic if OllamaClient.pullModel supports it
+                            toast.info(`Cancellation for ${model.model_name} requested.`, {
+                              id: toastId,
+                            });
+                          },
+                        },
+                      });
+                      try {
+                        await OllamaClient.pullModel({ name: model.model_name });
+                        toast.success(`${model.model_name} installed successfully!`, {
+                          id: toastId,
+                        });
+                      } catch (err) {
+                        toast.error(`Failed to install ${model.model_name}.`, {
+                          id: toastId,
+                          description: err instanceof Error ? err.message : String(err),
+                        });
+                      } finally {
+                        setPullingModel(null);
+                        // Refresh installed models after successful pull
+                        const installed = await OllamaClient.listModels();
+                        setInstalledModels(
+                          new Set(installed.models.map((m) => m.name)),
+                        );
+                      }
                     }}
                     disabled={
                       pullingModel === model.model_name ||
@@ -149,6 +172,7 @@ export default function LibraryPage() {
       {!loading && !error && filtered.length === 0 && (
         <p className="text-muted-foreground">No models matched your search.</p>
       )}
+      <Toaster />
     </div>
   );
 }
