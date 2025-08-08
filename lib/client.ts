@@ -22,13 +22,48 @@ export class OllamaClient {
     name,
     stream = false,
   }: PullModelRequest): Promise<Response> {
-    const res = await fetch(`${OLLAMA_BASE}/api/pull`, {
-      method: "POST",
-      body: JSON.stringify({ name, stream }),
-      headers: { "Content-Type": "application/json" },
+    const { spawn } = await import("child_process");
+    const { promisify } = await import("util");
+
+    return new Promise((resolve, reject) => {
+      const args = ["pull", name];
+      const ollama = spawn("ollama", args);
+
+      let stdout = "";
+      let stderr = "";
+
+      ollama.stdout?.on("data", (data) => {
+        stdout += data.toString();
+      });
+
+      ollama.stderr?.on("data", (data) => {
+        stderr += data.toString();
+      });
+
+      ollama.on("close", (code) => {
+        if (code !== 0) {
+          reject(new Error(`Failed to pull model: ${stderr}`));
+          return;
+        }
+
+        // Create a mock Response object to maintain API compatibility
+        const mockResponse = {
+          ok: true,
+          status: 200,
+          statusText: "OK",
+          json: async () => ({ success: true }),
+          text: async () => stdout,
+          body: null,
+          headers: new Headers(),
+        } as Response;
+
+        resolve(mockResponse);
+      });
+
+      ollama.on("error", (error) => {
+        reject(new Error(`Failed to pull model: ${error.message}`));
+      });
     });
-    if (!res.ok) throw new Error("Failed to pull model");
-    return res;
   }
 
   static async deleteModel({
