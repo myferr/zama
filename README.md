@@ -31,7 +31,7 @@ Right now Zama has no pre-built binaries and is in active development, if you wi
 
 You'll need **git**, **Rust toolchain**, **Node.js**, **pnpm/yarn/npm/bun**, and **Ollama**.
 
-```
+```sh
 git clone https://github.com/myferr/zama.git
 cd zama
 npm install # or yarn, pnpm, bun
