@@ -37,7 +37,7 @@ You can download and run the latest release installer script directly from GitHu
 curl -L https://raw.githubusercontent.com/myferr/zama/main/scripts/install.sh | bash
 ```
 
-**PowerShell/Windows:**
+**PowerShell/Windows:** (Requires PowerShell 7 or later)
 ```powershell
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.ps1" -OutFile install.ps1; .\install.ps1; Remove-Item install.ps1
 ```
