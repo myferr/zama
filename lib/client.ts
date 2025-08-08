@@ -105,4 +105,34 @@ export class OllamaClient {
 
     return messages;
   }
+
+  static async *chatStream(request: ChatRequest): AsyncGenerator<ChatResponse> {
+    const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) throw new Error("Chat request failed");
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No response body to read from");
+
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      for (const line of chunk.split("\n")) {
+        if (!line.trim()) continue;
+        try {
+          const parsed: ChatResponse = JSON.parse(line);
+          yield parsed;
+        } catch {
+          // Ignore malformed lines (if any)
+        }
+      }
+    }
+  }
 }
