@@ -33,6 +33,9 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Install cargo-tauri
+        run: cargo install cargo-tauri --version "^2.0.0-beta"
+
       - name: Install Tauri dependencies (Linux)
         if: matrix.platform == 'ubuntu-latest'
         run: |
