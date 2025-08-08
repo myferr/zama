@@ -53,7 +53,14 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: src-tauri/target/release/bundle/*.{dmg,deb,AppImage,msi,tar.gz}
+          files: |
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.msi
+            src-tauri/target/release/bundle/**/*.tar.gz
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.app
           name: Release ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
