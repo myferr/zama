@@ -4,7 +4,8 @@ import ChatPage from "@/pages/ChatPage";
 import ModelsPage from "@/pages/ModelsPage";
 import { ComponentChildren } from "preact";
 import { OllamaClient } from "../lib/client";
-import type { ListModelsResponse, OllamaModel } from "@/lib/schemas/client.schema";
+import type { OllamaModel } from "$/lib/schemas/client.schema";
+import LibraryPage from "@/pages/LibraryPage";
 
 interface PageConfig {
   id: string;
@@ -25,6 +26,12 @@ const pageConfigs: PageConfig[] = [
     name: "Your Models",
     icon: "⚙️",
     component: <ModelsPage />,
+  },
+  {
+    id: "library",
+    name: "Library",
+    icon: "📕",
+    component: <LibraryPage />,
   },
 ];
 
@@ -95,11 +102,13 @@ export default function App() {
         <header className="h-14 bg-slate-800 border-b border-slate-700 px-4 flex items-center justify-between">
           <h1 className="text-xl font-semibold">🧠 {loadedModel?.name}</h1>
           <div className="flex items-center gap-2">
-            <label htmlFor="model-select" className="text-sm">Select Model:</label>
+            <label htmlFor="model-select" className="text-sm">
+              Select Model:
+            </label>
             <select
               id="model-select"
               className="bg-slate-700 text-white rounded-md p-1"
-              value={selectedModel || ''}
+              value={selectedModel || ""}
               onChange={(e) => {
                 setSelectedModel(e.currentTarget.value);
                 setLoadedModel({ name: e.currentTarget.value });
@@ -117,7 +126,11 @@ export default function App() {
         <div className="flex flex-1 overflow-hidden">
           {/* Page Content */}
           <section className="flex-1 overflow-auto p-4">
-            {page === "chat" ? <ChatPage selectedModel={selectedModel} /> : currentPageComponent}
+            {page === "chat" ? (
+              <ChatPage selectedModel={selectedModel} />
+            ) : (
+              currentPageComponent
+            )}
           </section>
 
           {/* Right Sidebar */}
