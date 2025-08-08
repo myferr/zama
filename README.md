@@ -24,6 +24,7 @@ The only feature that requires you to be connected to the internet is **model lo
 * Temperature, context length, and system prompt customization
 * Model selection
 * Response copy (small clipboard icon under model responses)
+* Model removing/deletation
 and more to come soon!
 
 ### Running Zama
