@@ -6,8 +6,9 @@ import { OllamaClient } from "$/lib/client";
 import type { ChatRequest } from "$/lib/schemas/client.schema";
 import { SendHorizonal, Copy, Check, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import * as preact from "preact";
 import remarkGfm from "remark-gfm";
-import { JSX } from "preact/jsx-runtime";
+
 
 interface Message {
   role: "user" | "assistant";
@@ -85,15 +86,15 @@ export default function ChatPage({ selectedModel, contextLength, temperature, sy
   }, [messages]);
 
   return (
-    <div class="flex flex-col h-full bg-background text-foreground p-4">
+    <div className="flex flex-col h-full bg-background text-foreground p-4">
       <div
         ref={containerRef}
-        class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scrollbar-thin scrollbar-thumb-violet-500"
+        className="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scrollbar-thin scrollbar-thumb-violet-500"
       >
         {messages.map((msg, i) => (
           <div
             key={i}
-            class={`rounded-lg p-3 max-w-xl ${
+            className={`rounded-lg p-3 max-w-xl ${
               msg.role === "user"
                 ? "bg-violet-700 text-white self-end ml-auto"
                 : "bg-card text-foreground self-start mr-auto"
@@ -129,20 +130,20 @@ export default function ChatPage({ selectedModel, contextLength, temperature, sy
           </div>
         ))}
         {loading && (
-          <div class="text-muted-foreground italic animate-pulse">
+          <div className="text-muted-foreground italic animate-pulse">
             Generating...
           </div>
         )}
       </div>
 
-      <div class="flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <Input
-          class="flex-1 bg-input text-foreground border-border"
+          className="flex-1 bg-input text-foreground border-border"
           value={input}
-          onInput={(e: JSX.TargetedEvent<HTMLInputElement, Event>) =>
+          onInput={(e) =>
             setInput(e.currentTarget.value)
           }
-          onKeyDown={(e: KeyboardEvent) => {
+          onKeyDown={(e: preact.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSubmit();
@@ -151,7 +152,7 @@ export default function ChatPage({ selectedModel, contextLength, temperature, sy
           placeholder="Ask something..."
         />
         <Button onClick={handleSubmit} disabled={loading}>
-          <SendHorizonal class="w-4 h-4 mr-1" />
+          <SendHorizonal className="w-4 h-4 mr-1" />
           Send
         </Button>
         <Button
@@ -159,7 +160,7 @@ export default function ChatPage({ selectedModel, contextLength, temperature, sy
           onClick={() => setMessages([])}
           disabled={messages.length === 0}
         >
-          <Trash2 class="w-4 h-4 mr-1" />
+          <Trash2 className="w-4 h-4 mr-1" />
           Clear Chat
         </Button>
       </div>

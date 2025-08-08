@@ -1,4 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
+import * as preact from "preact";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import ChatPage from "@/pages/ChatPage";
 import ModelsPage from "@/pages/ModelsPage";
-import { ComponentChildren, JSX } from "preact";
+
 import { OllamaClient } from "../lib/client";
 import type { OllamaModel } from "$/lib/schemas/client.schema";
 import LibraryPage from "@/pages/LibraryPage";
@@ -23,13 +24,13 @@ import { MdChatBubbleOutline } from "react-icons/md";
 interface PageConfig {
   id: string;
   name: string;
-  icon: ComponentChildren;
+  icon: preact.ComponentChildren;
   component: (props: {
     selectedModel: string | null;
     contextLength: number | null;
     temperature: number;
     systemPrompt: string;
-  }) => ComponentChildren;
+  }) => preact.ComponentChildren;
 }
 
 const pageConfigs: PageConfig[] = [
@@ -136,7 +137,7 @@ export default function App() {
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent>
-                {availableModels.map((model) => (
+                {availableModels.map((model: OllamaModel) => (
                   <SelectItem key={model.name} value={model.name}>
                     {model.name}
                   </SelectItem>

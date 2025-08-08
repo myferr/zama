@@ -8,6 +8,7 @@ import { Trash2, RefreshCcw } from "lucide-react";
 export default function ModelsPage() {
   const [models, setModels] = useState<ListModelsResponse["models"]>([]);
   const [loading, setLoading] = useState(false);
+  
 
   const fetchModels = async () => {
     setLoading(true);
@@ -35,27 +36,27 @@ export default function ModelsPage() {
   }, []);
 
   return (
-    <div class="p-4 bg-background text-foreground">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold">Your Models</h2>
-        <Button variant="outline" onClick={fetchModels}>
-          <RefreshCcw class="w-4 h-4 mr-2" />
+    <div className="p-4 bg-background text-foreground">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Your Models</h2>
+        <Button variant="outline" onClick={fetchModels} disabled={loading}>
+          <RefreshCcw className="w-4 h-4 mr-2" />
           Refresh
         </Button>
       </div>
 
       {models.length === 0 ? (
-        <p class="text-muted-foreground">No models installed.</p>
+        <p className="text-muted-foreground">No models installed.</p>
       ) : (
-        <ul class="space-y-3">
+        <ul className="space-y-3">
           {models.map((model) => (
             <li
               key={model.name}
-              class="bg-card rounded-lg p-4 flex justify-between items-center"
+              className="bg-card rounded-lg p-4 flex justify-between items-center"
             >
               <div>
-                <div class="font-medium">{model.name}</div>
-                <div class="text-sm text-muted-foreground">
+                <div className="font-medium">{model.name}</div>
+                <div className="text-sm text-muted-foreground">
                   Size: {model.size} MB | Last Modified: {model.modified_at}
                 </div>
               </div>
@@ -63,7 +64,7 @@ export default function ModelsPage() {
                 variant="destructive"
                 onClick={() => handleDelete(model.name)}
               >
-                <Trash2 class="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
             </li>
