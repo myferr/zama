@@ -1,5 +1,12 @@
 import { useState, useEffect } from "preact/hooks";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ChatPage from "@/pages/ChatPage";
 import ModelsPage from "@/pages/ModelsPage";
 import { ComponentChildren } from "preact";
@@ -80,9 +87,9 @@ export default function App() {
   )?.component;
 
   return (
-    <div className="flex h-screen text-white bg-slate-900">
+    <div className="flex h-screen text-white bg-background">
       {/* Left Sidebar */}
-      <aside className="w-56 bg-slate-800 p-4 border-r border-slate-700">
+      <aside className="w-56 bg-card p-4 border-r border-border">
         <h2 className="text-lg font-semibold mb-4">Navigation</h2>
         {pageConfigs.map((p) => (
           <Button
@@ -99,27 +106,30 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="h-14 bg-slate-800 border-b border-slate-700 px-4 flex items-center justify-between">
+        <header className="h-14 bg-card border-b border-border px-4 flex items-center justify-between">
           <h1 className="text-xl font-semibold">🧠 {loadedModel?.name}</h1>
           <div className="flex items-center gap-2">
             <label htmlFor="model-select" className="text-sm">
               Select Model:
             </label>
-            <select
-              id="model-select"
-              className="bg-slate-700 text-white rounded-md p-1"
+            <Select
               value={selectedModel || ""}
-              onChange={(e) => {
-                setSelectedModel(e.currentTarget.value);
-                setLoadedModel({ name: e.currentTarget.value });
+              onValueChange={(value) => {
+                setSelectedModel(value);
+                setLoadedModel({ name: value });
               }}
             >
-              {availableModels.map((model) => (
-                <option key={model.name} value={model.name}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableModels.map((model) => (
+                  <SelectItem key={model.name} value={model.name}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </header>
 
@@ -134,10 +144,10 @@ export default function App() {
           </section>
 
           {/* Right Sidebar */}
-          <aside className="w-72 bg-slate-800 p-4 border-l border-slate-700">
+          <aside className="w-72 bg-card p-4 border-l border-border">
             <h2 className="text-lg font-semibold mb-2">Model Info</h2>
             {modelInfo && (
-              <ul className="space-y-1 text-sm text-slate-300">
+              <ul className="space-y-1 text-sm text-muted-foreground">
                 <li>
                   <strong>Status:</strong> {modelInfo.status}
                 </li>

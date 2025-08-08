@@ -2,6 +2,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { OllamaDBModel, OllamaDBResponse } from "$/lib/schemas/ollamadb.schema";
 import { invoke } from "@tauri-apps/api/core";
+import { Input } from "@/components/ui/input";
 
 import { SiOllama } from "react-icons/si";
 import { BiBadgeCheck } from "react-icons/bi";
@@ -52,12 +53,12 @@ export default function LibraryPage() {
     <div class="p-6 max-w-4xl mx-auto">
       <h1 class="text-2xl font-bold mb-4">Search Ollama Models</h1>
 
-      <input
+      <Input
         type="text"
-        class="w-full p-2 border rounded mb-4"
+        className="w-full p-2 border rounded mb-4"
         placeholder="Search by model name, label, namespace..."
         value={query}
-        onInput={(e) => setQuery((e.target as HTMLInputElement).value)}
+        onInput={(e: Event) => setQuery((e.target as HTMLInputElement).value)}
       />
 
       {loading && <p>Loading models...</p>}
@@ -83,7 +84,7 @@ export default function LibraryPage() {
                 </div>
                 <div>
                   <button
-                    className="hover:cursor-pointer hover:bg-slate-700 rounded p-1.5"
+                    className="hover:cursor-pointer hover:bg-accent rounded p-1.5"
                     onClick={async () => {
                       setPullingModel(model.model_name);
                       OllamaClient.pullModel({ name: model.model_name });
@@ -114,7 +115,7 @@ export default function LibraryPage() {
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <p class="text-slate-500">No models matched your search.</p>
+        <p class="text-muted-foreground">No models matched your search.</p>
       )}
     </div>
   );

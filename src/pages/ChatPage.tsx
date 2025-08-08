@@ -69,7 +69,7 @@ export default function ChatPage({ selectedModel }: ChatPageProps) {
   }, [messages]);
 
   return (
-    <div class="flex flex-col h-full dark bg-slate-900 text-slate-100 p-4">
+    <div class="flex flex-col h-full bg-background text-foreground p-4">
       <div
         ref={containerRef}
         class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scrollbar-thin scrollbar-thumb-violet-500"
@@ -80,20 +80,22 @@ export default function ChatPage({ selectedModel }: ChatPageProps) {
             class={`rounded-lg p-3 max-w-xl ${
               msg.role === "user"
                 ? "bg-violet-700 text-white self-end ml-auto"
-                : "bg-slate-800 text-slate-100 self-start mr-auto"
+                : "bg-card text-foreground self-start mr-auto"
             }`}
           >
             {msg.content}
           </div>
         ))}
         {loading && (
-          <div class="text-slate-400 italic animate-pulse">Generating...</div>
+          <div class="text-muted-foreground italic animate-pulse">
+            Generating...
+          </div>
         )}
       </div>
 
       <div class="flex items-center gap-2">
         <Input
-          class="flex-1 bg-slate-800 text-white border-slate-700"
+          class="flex-1 bg-input text-foreground border-border"
           value={input}
           onInput={(e: JSX.TargetedEvent<HTMLInputElement, Event>) =>
             setInput(e.currentTarget.value)

@@ -35,7 +35,7 @@ export default function ModelsPage() {
   }, []);
 
   return (
-    <div class="p-4 dark bg-slate-900 text-slate-100">
+    <div class="p-4 bg-background text-foreground">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold">Your Models</h2>
         <Button variant="outline" onClick={fetchModels}>
@@ -45,17 +45,17 @@ export default function ModelsPage() {
       </div>
 
       {models.length === 0 ? (
-        <p class="text-slate-400">No models installed.</p>
+        <p class="text-muted-foreground">No models installed.</p>
       ) : (
         <ul class="space-y-3">
           {models.map((model) => (
             <li
               key={model.name}
-              class="bg-slate-800 rounded-lg p-4 flex justify-between items-center"
+              class="bg-card rounded-lg p-4 flex justify-between items-center"
             >
               <div>
                 <div class="font-medium">{model.name}</div>
-                <div class="text-sm text-slate-400">
+                <div class="text-sm text-muted-foreground">
                   Size: {model.size} MB | Last Modified: {model.modified_at}
                 </div>
               </div>
