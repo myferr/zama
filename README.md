@@ -27,9 +27,22 @@ The only feature that requires you to be connected to the internet is **model lo
 and more to come soon!
 
 ### Running Zama
-Right now Zama has no pre-built binaries and is in active development, if you wish to use Zama in such early stages you'll have to manually build it (don't worry, it's easy!)
 
-You'll need **git**, **Rust toolchain**, **Node.js**, **pnpm/yarn/npm/bun**, and **Ollama**.
+#### Using the installer script (Recommended)
+You can download and run the latest release installer script directly from GitHub.
+
+**Bash/Linux/macOS:**
+```sh
+curl -L https://raw.githubusercontent.com/myferr/zama/main/scripts/install.sh | bash
+```
+
+**PowerShell/Windows:**
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.ps1" -OutFile install.ps1; .\install.ps1; Remove-Item install.ps1
+```
+
+#### Building from source
+If you wish to build Zama from source, you'll need **git**, **Rust toolchain**, **Node.js**, **pnpm/yarn/npm/bun**, and **Ollama**.
 
 ```sh
 git clone https://github.com/myferr/zama.git
