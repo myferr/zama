@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { OllamaClient } from "$/lib/client";
 import type { ChatRequest } from "$/lib/schemas/client.schema";
-import { SendHorizonal } from "lucide-react";
+import { SendHorizonal, Copy, Check, Trash2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { JSX } from "preact/jsx-runtime";
 
 interface Message {
@@ -14,12 +16,16 @@ interface Message {
 
 interface ChatPageProps {
   selectedModel: string | null;
+  contextLength: number | null;
+  temperature: number;
+  systemPrompt: string;
 }
 
-export default function ChatPage({ selectedModel }: ChatPageProps) {
+export default function ChatPage({ selectedModel, contextLength, temperature, systemPrompt }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async () => {
@@ -39,10 +45,20 @@ export default function ChatPage({ selectedModel }: ChatPageProps) {
     // Add a placeholder for the assistant's response
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
+    const messagesToSend = [];
+    if (systemPrompt) {
+      messagesToSend.push({ role: "system", content: systemPrompt });
+    }
+    messagesToSend.push({ role: "user", content: userMessage.content });
+
     try {
       for await (const chunk of OllamaClient.chatStream({
         model: selectedModel!, // selectedModel is guaranteed to be non-null here
-        messages: [{ role: "user", content: userMessage.content }],
+        messages: messagesToSend,
+        options: {
+          num_ctx: contextLength || undefined,
+          temperature: temperature,
+        },
       } as ChatRequest)) {
         // Cast to ChatRequest as chatStream expects it
         setMessages((prev) => {
@@ -83,7 +99,33 @@ export default function ChatPage({ selectedModel }: ChatPageProps) {
                 : "bg-card text-foreground self-start mr-auto"
             }`}
           >
-            {msg.content}
+            <div>
+              {msg.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.content}
+                </ReactMarkdown>
+              ) : (
+                msg.content
+              )}
+            </div>
+            {msg.role === "assistant" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(msg.content);
+                  setCopiedMessageIndex(i);
+                  setTimeout(() => setCopiedMessageIndex(null), 2000); // Reset after 2 seconds
+                }}
+                className="mt-2"
+              >
+                {copiedMessageIndex === i ? (
+                  <Check className="w-4 h-4 text-green-500" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
+            )}
           </div>
         ))}
         {loading && (
@@ -111,6 +153,14 @@ export default function ChatPage({ selectedModel }: ChatPageProps) {
         <Button onClick={handleSubmit} disabled={loading}>
           <SendHorizonal class="w-4 h-4 mr-1" />
           Send
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setMessages([])}
+          disabled={messages.length === 0}
+        >
+          <Trash2 class="w-4 h-4 mr-1" />
+          Clear Chat
         </Button>
       </div>
     </div>

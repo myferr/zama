@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { SiOllama } from "react-icons/si";
 import { BiBadgeCheck } from "react-icons/bi";
 import { RxDownload } from "react-icons/rx";
+import { Check } from "lucide-react";
 import { OllamaClient } from "$/lib/client";
 
 export default function LibraryPage() {
@@ -15,6 +16,14 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pullingModel, setPullingModel] = useState<string | null>(null);
+  const [installedModels, setInstalledModels] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const getBaseModelName = (modelName: string) => {
+    const parts = modelName.split(":");
+    return parts[0];
+  };
 
   useEffect(() => {
     async function fetchModels() {
@@ -23,6 +32,11 @@ export default function LibraryPage() {
         const res = await invoke<string>("get_ollama_models");
         const json = JSON.parse(res);
         setModels(json.models);
+
+        const installed = await OllamaClient.listModels();
+        setInstalledModels(
+          new Set(installed.models.map((m) => getBaseModelName(m.name))),
+        );
       } catch (err) {
         setError(
           typeof err === "string"
@@ -84,14 +98,32 @@ export default function LibraryPage() {
                 </div>
                 <div>
                   <button
-                    className="hover:cursor-pointer hover:bg-accent rounded p-1.5"
+                    className={`${
+                      pullingModel === model.model_name ||
+                      installedModels.has(getBaseModelName(model.model_name))
+                        ? "disabled"
+                        : "hover:cursor-pointer"
+                    } hover:bg-accent rounded p-1.5}`}
                     onClick={async () => {
                       setPullingModel(model.model_name);
-                      OllamaClient.pullModel({ name: model.model_name });
+                      await OllamaClient.pullModel({ name: model.model_name });
+                      setPullingModel(null);
+                      // Refresh installed models after successful pull
+                      const installed = await OllamaClient.listModels();
+                      setInstalledModels(
+                        new Set(installed.models.map((m) => m.name)),
+                      );
                     }}
-                    disabled={pullingModel === model.model_name}
+                    disabled={
+                      pullingModel === model.model_name ||
+                      installedModels.has(getBaseModelName(model.model_name))
+                    }
                   >
-                    <RxDownload />
+                    {installedModels.has(getBaseModelName(model.model_name)) ? (
+                      <Check className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <RxDownload />
+                    )}
                   </button>
                 </div>
               </div>

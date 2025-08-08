@@ -1,5 +1,7 @@
 import { useState, useEffect } from "preact/hooks";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -22,7 +24,12 @@ interface PageConfig {
   id: string;
   name: string;
   icon: ComponentChildren;
-  component: ComponentChildren;
+  component: (props: {
+    selectedModel: string | null;
+    contextLength: number | null;
+    temperature: number;
+    systemPrompt: string;
+  }) => ComponentChildren;
 }
 
 const pageConfigs: PageConfig[] = [
@@ -30,32 +37,35 @@ const pageConfigs: PageConfig[] = [
     id: "chat",
     name: "Chat",
     icon: <MdChatBubbleOutline />,
-    component: <ChatPage />,
+    component: ({ selectedModel, contextLength, temperature, systemPrompt }) => (
+      <ChatPage
+        selectedModel={selectedModel}
+        contextLength={contextLength}
+        temperature={temperature}
+        systemPrompt={systemPrompt}
+      />
+    ),
   },
   {
     id: "models",
     name: "Your Models",
     icon: <SiRobotframework />,
-    component: <ModelsPage />,
+    component: () => <ModelsPage />,
   },
   {
     id: "library",
     name: "Library",
     icon: <VscLibrary />,
-    component: <LibraryPage />,
+    component: () => <LibraryPage />,
   },
 ];
 
 export default function App() {
   const [page, setPage] = useState<string>(pageConfigs[0].id);
   const [loadedModel, setLoadedModel] = useState<{ name: string } | null>(null);
-  const [modelInfo, setModelInfo] = useState<{
-    status: string;
-    vram: number;
-    vram_total: number;
-    load: number;
-    temp: number;
-  } | null>(null);
+  const [contextLength, setContextLength] = useState<number | null>(null);
+  const [temperature, setTemperature] = useState<number>(0.8); // Default temperature
+  const [systemPrompt, setSystemPrompt] = useState<string>("");
   const [availableModels, setAvailableModels] = useState<OllamaModel[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
@@ -70,15 +80,9 @@ export default function App() {
           setLoadedModel({ name: modelsResponse.models[0].name });
         }
 
-        // Fetch model info
-        const infoResponse = await OllamaClient.getConfig();
-        setModelInfo({
-          status: "loaded", // ConfigResponse doesn't have status, so we'll default this
-          vram: 0, // ConfigResponse doesn't have vram info, so we'll default these
-          vram_total: 0,
-          load: 0,
-          temp: 0,
-        });
+        // Fetch model config
+        const configResponse = await OllamaClient.getConfig();
+        setContextLength(configResponse.num_ctx);
       } catch (error) {
         console.error("Failed to load initial data:", error);
       }
@@ -145,33 +149,58 @@ export default function App() {
         <div className="flex flex-1 overflow-hidden">
           {/* Page Content */}
           <section className="flex-1 overflow-auto p-4">
-            {page === "chat" ? (
-              <ChatPage selectedModel={selectedModel} />
-            ) : (
-              currentPageComponent
-            )}
+            {currentPageComponent && currentPageComponent({
+              selectedModel,
+              contextLength,
+              temperature,
+              systemPrompt,
+            })}
           </section>
 
           {/* Right Sidebar */}
           <aside className="w-72 bg-card p-4 border-l border-border">
-            <h2 className="text-lg font-semibold mb-2">Model Info</h2>
-            {modelInfo && (
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>
-                  <strong>Status:</strong> {modelInfo.status}
-                </li>
-                <li>
-                  <strong>VRAM:</strong> {(modelInfo.vram / 1e9).toFixed(2)} /{" "}
-                  {(modelInfo.vram_total / 1e9).toFixed(2)} GB
-                </li>
-                <li>
-                  <strong>Load:</strong> {(modelInfo.load * 100).toFixed(0)}%
-                </li>
-                <li>
-                  <strong>Temp:</strong> {modelInfo.temp}°C
-                </li>
-              </ul>
-            )}
+            <h2 className="text-lg font-semibold mb-2">Model Configuration</h2>
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <div>
+                <label htmlFor="system-prompt" className="block mb-1">
+                  System Prompt:
+                </label>
+                <Textarea
+                  id="system-prompt"
+                  value={systemPrompt}
+                  onInput={(e) =>
+                    setSystemPrompt((e.target as HTMLTextAreaElement).value)
+                  }
+                  placeholder="Enter system prompt here..."
+                />
+              </div>
+              <div>
+                <label htmlFor="context-length" className="block mb-1">
+                  Context Length: {contextLength}
+                </label>
+                <Slider
+                  id="context-length"
+                  min={512}
+                  max={8192}
+                  step={1}
+                  value={[contextLength || 0]}
+                  onValueChange={(value) => setContextLength(value[0])}
+                />
+              </div>
+              <div>
+                <label htmlFor="temperature" className="block mb-1">
+                  Temperature: {temperature}
+                </label>
+                <Slider
+                  id="temperature"
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  value={[temperature]}
+                  onValueChange={(value) => setTemperature(value[0])}
+                />
+              </div>
+            </div>
           </aside>
         </div>
       </main>
