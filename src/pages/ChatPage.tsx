@@ -8,7 +8,7 @@ import { SendHorizonal, Copy, Check, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import * as preact from "preact";
 import remarkGfm from "remark-gfm";
-
+import { RxGithubLogo } from "react-icons/rx";
 
 interface Message {
   role: "user" | "assistant";
@@ -22,11 +22,18 @@ interface ChatPageProps {
   systemPrompt: string;
 }
 
-export default function ChatPage({ selectedModel, contextLength, temperature, systemPrompt }: ChatPageProps) {
+export default function ChatPage({
+  selectedModel,
+  contextLength,
+  temperature,
+  systemPrompt,
+}: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(
+    null,
+  );
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async () => {
@@ -91,45 +98,60 @@ export default function ChatPage({ selectedModel, contextLength, temperature, sy
         ref={containerRef}
         className="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scrollbar-thin scrollbar-thumb-violet-500"
       >
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`rounded-lg p-3 max-w-xl ${
-              msg.role === "user"
-                ? "bg-violet-700 text-white self-end ml-auto"
-                : "bg-card text-foreground self-start mr-auto"
-            }`}
-          >
-            <div>
-              {msg.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.content}
-                </ReactMarkdown>
-              ) : (
-                msg.content
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-center">
+            <h2 className="text-2xl font-semibold mb-2 text-white">
+              Welcome to Zama
+            </h2>
+            <p>Start a conversation by typing a message below</p>
+            <p>Make sure you have a model installed in the Library tab</p>
+            <span className={"mt-2"}>
+              <a href={"https://github.com/myferr/zama"} target={"_blank"}>
+                <RxGithubLogo color="white" size={26} />
+              </a>
+            </span>
+          </div>
+        ) : (
+          messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`rounded-lg p-3 max-w-xl ${
+                msg.role === "user"
+                  ? "bg-violet-700 text-white self-end ml-auto"
+                  : "bg-card text-foreground self-start mr-auto"
+              }`}
+            >
+              <div>
+                {msg.role === "assistant" ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                  </ReactMarkdown>
+                ) : (
+                  msg.content
+                )}
+              </div>
+              {msg.role === "assistant" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(msg.content);
+                    setCopiedMessageIndex(i);
+                    setTimeout(() => setCopiedMessageIndex(null), 2000); // Reset after 2 seconds
+                  }}
+                  className="mt-2"
+                >
+                  {copiedMessageIndex === i ? (
+                    <Check className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
               )}
             </div>
-            {msg.role === "assistant" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(msg.content);
-                  setCopiedMessageIndex(i);
-                  setTimeout(() => setCopiedMessageIndex(null), 2000); // Reset after 2 seconds
-                }}
-                className="mt-2"
-              >
-                {copiedMessageIndex === i ? (
-                  <Check className="w-4 h-4 text-green-500" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
-            )}
-          </div>
-        ))}
-        {loading && (
+          ))
+        )}
+        {loading && messages.length > 0 && (
           <div className="text-muted-foreground italic animate-pulse">
             Generating...
           </div>
@@ -140,10 +162,10 @@ export default function ChatPage({ selectedModel, contextLength, temperature, sy
         <Input
           className="flex-1 bg-input text-foreground border-border"
           value={input}
-          onInput={(e) =>
-            setInput(e.currentTarget.value)
-          }
-          onKeyDown={(e: preact.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>) => {
+          onInput={(e) => setInput(e.currentTarget.value)}
+          onKeyDown={(
+            e: preact.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>,
+          ) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSubmit();
