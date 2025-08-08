@@ -6,12 +6,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { SiOllama } from "react-icons/si";
 import { BiBadgeCheck } from "react-icons/bi";
 import { RxDownload } from "react-icons/rx";
+import { OllamaClient } from "$/lib/client";
 
 export default function LibraryPage() {
   const [models, setModels] = useState<OllamaDBModel[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pullingModel, setPullingModel] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchModels() {
@@ -70,14 +72,24 @@ export default function LibraryPage() {
             >
               <div className="justify-between flex">
                 <div className="flex gap-2.5 items-center">
-                  <h2 class="text-lg font-semibold">{model.model_name}</h2>
+                  <h2 class="text-lg font-semibold">
+                    {model.model_name}{" "}
+                    {pullingModel === model.model_name && "Installing..."}
+                  </h2>
                   <a href={model.url} target="_blank">
                     <SiOllama />
                   </a>
                   {model.model_type === "official" ? <BiBadgeCheck /> : null}
                 </div>
                 <div>
-                  <button>
+                  <button
+                    className="hover:cursor-pointer hover:bg-slate-700 rounded p-1.5"
+                    onClick={async () => {
+                      setPullingModel(model.model_name);
+                      OllamaClient.pullModel({ name: model.model_name });
+                    }}
+                    disabled={pullingModel === model.model_name}
+                  >
                     <RxDownload />
                   </button>
                 </div>
@@ -102,7 +114,7 @@ export default function LibraryPage() {
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <p class="text-gray-500">No models matched your search.</p>
+        <p class="text-slate-500">No models matched your search.</p>
       )}
     </div>
   );
