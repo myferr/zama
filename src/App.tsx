@@ -66,13 +66,14 @@ export default function App() {
           setLoadedModel({ name: modelsResponse.models[0].name });
         }
 
-        // Mock model info - replace with actual API call when available
+        // Fetch model info
+        const infoResponse = await OllamaClient.getConfig();
         setModelInfo({
-          status: "loaded",
-          vram: 4.2e9,
-          vram_total: 8e9,
-          load: 0.65,
-          temp: 72,
+          status: "loaded", // ConfigResponse doesn't have status, so we'll default this
+          vram: 0, // ConfigResponse doesn't have vram info, so we'll default these
+          vram_total: 0,
+          load: 0,
+          temp: 0,
         });
       } catch (error) {
         console.error("Failed to load initial data:", error);
@@ -107,14 +108,18 @@ export default function App() {
       <main className="flex-1 flex flex-col">
         {/* Top Bar */}
         <header className="h-14 bg-card border-b border-border px-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">🧠 {loadedModel?.name}</h1>
+          <div className="flex justify-center items-center flex-1">
+            <span className="text-sm font-mono font-semibold">
+              {loadedModel?.name}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <label htmlFor="model-select" className="text-sm">
               Select Model:
             </label>
             <Select
               value={selectedModel || ""}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 setSelectedModel(value);
                 setLoadedModel({ name: value });
               }}
