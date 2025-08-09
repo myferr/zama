@@ -11,20 +11,28 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 async fn get_ollama_models() -> Result<String, String> {
+    println!("Attempting to fetch models from ollamadb.dev...");
     let res = reqwest::get("https://ollamadb.dev/api/v1/models?limit=200&skip=0")
         .await
-        .map_err(|e| format!("Failed to fetch from ollamadb.dev: {}", e.to_string()))?;
+        .map_err(|e| {
+            eprintln!("Error fetching from ollamadb.dev: {}", e);
+            format!("Failed to fetch from ollamadb.dev: {}", e.to_string())
+        })?;
 
+    println!("Received response from ollamadb.dev with status: {}", res.status());
     if !res.status().is_success() {
-        return Err(format!(
-            "OllamaDB API returned non-success status: {}",
-            res.status()
-        ));
+        let status = res.status();
+        let error_msg = format!("OllamaDB API returned non-success status: {}", status);
+        eprintln!("{}", error_msg);
+        return Err(error_msg);
     }
 
     res.text()
         .await
-        .map_err(|e| format!("Failed to read response text: {}", e.to_string()))
+        .map_err(|e| {
+            eprintln!("Error reading response text: {}", e);
+            format!("Failed to read response text: {}", e.to_string())
+        })
 }
 
 #[tauri::command]
