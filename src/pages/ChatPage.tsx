@@ -201,8 +201,9 @@ export default function ChatPage({
                 : "Select a model to start chatting"}
             </p>
             <div className="flex items-center gap-2 text-sm">
-              <RxGithubLogo size={16} />
-              <span>Powered by Ollama</span>
+              <a href="https://github.com/myferr/zama">
+                <RxGithubLogo size={26} />
+              </a>
             </div>
           </div>
         ) : (
