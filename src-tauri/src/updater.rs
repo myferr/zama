@@ -2,6 +2,7 @@
 use std::process::Command;
 use std::fs;
 use std::path::PathBuf;
+use semver::Version;
 
 // Function to get the current version from pkg/version.json
 pub fn get_current_version() -> Result<String, String> {
@@ -37,10 +38,28 @@ pub async fn get_latest_version() -> Result<String, String> {
     Ok(version)
 }
 
-// Function to compare versions
+// Function to compare versions using semantic versioning
 pub fn is_update_available(current_version: &str, latest_version: &str) -> bool {
     println!("Comparing current version ({}) with latest version ({})", current_version, latest_version);
-    let update = latest_version > current_version;
+    
+    // Parse versions using semver for proper comparison
+    let current = match Version::parse(current_version) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Failed to parse current version '{}': {}", current_version, e);
+            return false;
+        }
+    };
+    
+    let latest = match Version::parse(latest_version) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("Failed to parse latest version '{}': {}", latest_version, e);
+            return false;
+        }
+    };
+    
+    let update = latest > current;
     if update {
         println!("Update is available.");
     } else {
@@ -61,10 +80,15 @@ pub fn uninstall_app() -> Result<(), String> {
     for app_path in common_app_paths {
         if app_path.exists() {
             println!("Found app at: {:?}", app_path);
-            // Move to Trash (macOS specific command)
+            // Move to Trash (macOS specific command) - using proper escaping
+            let app_path_str = app_path.to_string_lossy();
+            // Escape single quotes in the path to prevent AppleScript injection
+            let escaped_path = app_path_str.replace("'", "'\"'\"'");
+            let applescript_cmd = format!("tell app \"Finder\" to move POSIX file \"{}\" to trash", escaped_path);
+            
             let output = Command::new("osascript")
                 .arg("-e")
-                .arg(format!("tell app \"Finder\" to move POSIX file \"{}\" to trash", app_path.to_string_lossy()))
+                .arg(applescript_cmd)
                 .output()
                 .map_err(|e| format!("Failed to execute osascript for uninstall: {}", e))?;
 
@@ -82,18 +106,58 @@ pub fn uninstall_app() -> Result<(), String> {
     Err("Zama.app not found in common application directories.".to_string())
 }
 
-// Function to install the latest application using the install.sh script
-pub fn install_app() -> Result<(), String> {
+// Function to install the latest application using secure download and verification
+pub async fn install_app() -> Result<(), String> {
     println!("Attempting to install the latest version of Zama...");
     let install_script_url = "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.sh";
 
-    // Download and execute the install script
-    println!("Executing install script from: {}", install_script_url);
+    // Securely download the install script first
+    println!("Downloading install script from: {}", install_script_url);
+    let response = reqwest::get(install_script_url)
+        .await
+        .map_err(|e| format!("Failed to download install script: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Failed to download install script: HTTP {}", response.status()));
+    }
+
+    let script_content = response.text()
+        .await
+        .map_err(|e| format!("Failed to read install script: {}", e))?;
+
+    // Basic validation - ensure it's actually a shell script
+    if !script_content.starts_with("#!/") {
+        return Err("Install script does not appear to be a valid shell script".to_string());
+    }
+
+    // Write script to a temporary file
+    let temp_dir = std::env::temp_dir();
+    let script_path = temp_dir.join("zama_install.sh");
+    
+    std::fs::write(&script_path, &script_content)
+        .map_err(|e| format!("Failed to write install script to temp file: {}", e))?;
+
+    // Make script executable
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&script_path)
+            .map_err(|e| format!("Failed to get script permissions: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&script_path, perms)
+            .map_err(|e| format!("Failed to set script permissions: {}", e))?;
+    }
+
+    // Execute the script from the local file
+    println!("Executing install script...");
     let output = Command::new("bash")
-        .arg("-c")
-        .arg(format!("curl -L {} | bash", install_script_url))
+        .arg(&script_path)
         .output()
         .map_err(|e| format!("Failed to execute install script: {}", e))?;
+
+    // Clean up temp file
+    let _ = std::fs::remove_file(&script_path);
 
     if output.status.success() {
         println!("Installation script executed successfully.");
@@ -120,7 +184,7 @@ pub async fn check_and_update() {
                             eprintln!("Uninstall failed: {}", e);
                             // Continue with install even if uninstall fails, as it might be a fresh install or app not found
                         }
-                        if let Err(e) = install_app() {
+                        if let Err(e) = install_app().await {
                             eprintln!("Install failed: {}", e);
                             return;
                         }
