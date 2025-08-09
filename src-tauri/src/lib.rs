@@ -1,9 +1,10 @@
-use reqwest;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command as TokioCommand;
 use tokio::time::{timeout, Duration};
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod updater;
+
+// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/ 
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -87,7 +88,7 @@ async fn pull_model(model_name: String) -> Result<String, String> {
 
     if status.success() {
         Ok(format!(
-            "Model {} pulled successfully.\n{}",
+            "Model {} pulled successfully.\n fonbet{}",
             model_name, output
         ))
     } else {
@@ -147,6 +148,10 @@ pub fn run() {
         .setup(|_app| {
             #[cfg(desktop)]
             tauri::async_runtime::spawn(async move {
+                // Check for updates
+                updater::check_and_update().await;
+
+                // Original Ollama check
                 match _check_and_start_ollama_logic().await {
                     Ok(msg) => println!("Ollama status: {}", msg),
                     Err(e) => eprintln!("Error checking/starting Ollama: {}", e),
