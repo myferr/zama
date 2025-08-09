@@ -25,6 +25,8 @@ The only feature that requires you to be connected to the internet is **model lo
 * Select models
 * Copy responses (clipboard icon under model responses)
 * Remove/delete models
+* Auto update
+* Ollama status check and auto-start functionality
 
 and more to come soon!
 
