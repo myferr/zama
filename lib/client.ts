@@ -12,6 +12,46 @@ import { invoke } from "@tauri-apps/api/core";
 
 const OLLAMA_BASE = "http://localhost:11434";
 
+// Input validation helpers
+function validateModelName(name: string): void {
+  if (!name || typeof name !== 'string') {
+    throw new Error('Model name must be a non-empty string');
+  }
+  if (name.trim() !== name) {
+    throw new Error('Model name cannot have leading or trailing whitespace');
+  }
+  if (name.length > 200) {
+    throw new Error('Model name is too long (max 200 characters)');
+  }
+  // Basic pattern to prevent obvious injection attempts
+  if (/[<>"'&]/.test(name)) {
+    throw new Error('Model name contains invalid characters');
+  }
+}
+
+function validateChatRequest(request: ChatRequest): void {
+  if (!request.model || typeof request.model !== 'string') {
+    throw new Error('Chat request must include a valid model name');
+  }
+  validateModelName(request.model);
+  
+  if (!Array.isArray(request.messages) || request.messages.length === 0) {
+    throw new Error('Chat request must include at least one message');
+  }
+  
+  for (const message of request.messages) {
+    if (!message.role || !['user', 'assistant', 'system'].includes(message.role)) {
+      throw new Error('Invalid message role');
+    }
+    if (typeof message.content !== 'string') {
+      throw new Error('Message content must be a string');
+    }
+    if (message.content.length > 50000) {
+      throw new Error('Message content is too long (max 50,000 characters)');
+    }
+  }
+}
+
 export class OllamaClient {
   static async listModels(): Promise<ListModelsResponse> {
     const res = await fetch(`${OLLAMA_BASE}/api/tags`);
@@ -20,6 +60,7 @@ export class OllamaClient {
   }
 
   static async pullModel({ name }: PullModelRequest): Promise<string> {
+    validateModelName(name);
     try {
       const response = await invoke<string>("pull_model", { modelName: name });
       return response;
@@ -31,6 +72,7 @@ export class OllamaClient {
   static async deleteModel({
     name,
   }: DeleteModelRequest): Promise<{ success: boolean }> {
+    validateModelName(name);
     const res = await fetch(`${OLLAMA_BASE}/api/delete`, {
       method: "DELETE",
       body: JSON.stringify({ name }),
@@ -55,6 +97,7 @@ export class OllamaClient {
   static async showModel({
     name,
   }: ShowModelRequest): Promise<ShowModelResponse> {
+    validateModelName(name);
     const res = await fetch(`${OLLAMA_BASE}/api/show`, {
       method: "POST",
       body: JSON.stringify({ name }),
@@ -71,6 +114,7 @@ export class OllamaClient {
   }
 
   static async chat(request: ChatRequest): Promise<ChatResponse[]> {
+    validateChatRequest(request);
     const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: "POST",
       body: JSON.stringify(request),
@@ -104,6 +148,7 @@ export class OllamaClient {
   }
 
   static async *chatStream(request: ChatRequest): AsyncGenerator<ChatResponse> {
+    validateChatRequest(request);
     const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: "POST",
       body: JSON.stringify(request),
