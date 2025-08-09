@@ -57,7 +57,7 @@ export default function ModelsPage() {
               <div>
                 <div className="font-medium">{model.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  Size: {model.size} MB | Last Modified: {model.modified_at}
+                  Size: {Math.round(model.size / (1000 * 1000 * 1000))} GB | Last Modified: {model.modified_at}
                 </div>
               </div>
               <Button
