@@ -5,19 +5,23 @@ use std::path::PathBuf;
 
 // Function to get the current version from pkg/version.json
 pub fn get_current_version() -> Result<String, String> {
+    println!("Attempting to get current version from ../pkg/version.json...");
     let version_path = PathBuf::from("../pkg/version.json");
     let content = fs::read_to_string(&version_path)
         .map_err(|e| format!("Failed to read version.json: {}", e))?;
     let json: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse version.json: {}", e))?;
-    json["version"].as_str()
+    let version = json["version"].as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| "Version not found in version.json".to_string())
+        .ok_or_else(|| "Version not found in version.json".to_string())?;
+    println!("Successfully read current version: {}", version);
+    Ok(version)
 }
 
 // Function to fetch the latest version from GitHub
 pub async fn get_latest_version() -> Result<String, String> {
     let url = "https://raw.githubusercontent.com/myferr/zama/main/pkg/version.json";
+    println!("Attempting to fetch latest version from GitHub: {}", url);
     let response = reqwest::get(url)
         .await
         .map_err(|e| format!("Failed to fetch latest version: {}", e))?;
@@ -26,16 +30,23 @@ pub async fn get_latest_version() -> Result<String, String> {
         .map_err(|e| format!("Failed to read response text: {}", e))?;
     let json: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse latest version JSON: {}", e))?;
-    json["version"].as_str()
+    let version = json["version"].as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| "Version not found in latest version JSON".to_string())
+        .ok_or_else(|| "Version not found in latest version JSON".to_string())?;
+    println!("Successfully fetched latest version: {}", version);
+    Ok(version)
 }
 
 // Function to compare versions
 pub fn is_update_available(current_version: &str, latest_version: &str) -> bool {
-    // Simple string comparison for now. For more robust version comparison (e.g., 0.1.0 vs 0.1.10),
-    // a proper version parsing library would be needed.
-    latest_version > current_version
+    println!("Comparing current version ({}) with latest version ({})", current_version, latest_version);
+    let update = latest_version > current_version;
+    if update {
+        println!("Update is available.");
+    } else {
+        println!("No update available.");
+    }
+    update
 }
 
 // Function to uninstall the current application (macOS specific)
@@ -59,12 +70,15 @@ pub fn uninstall_app() -> Result<(), String> {
 
             if output.status.success() {
                 println!("Successfully moved {:?} to Trash.", app_path);
-                return Ok(());
+                return Ok(())
             } else {
-                return Err(format!("Failed to move {:?} to Trash: {}", app_path, String::from_utf8_lossy(&output.stderr)));
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("Failed to move {:?} to Trash. Stderr: {}", app_path, stderr);
+                return Err(format!("Failed to move {:?} to Trash: {}", app_path, stderr));
             }
         }
     }
+    println!("Zama.app not found in common application directories. Skipping uninstall.");
     Err("Zama.app not found in common application directories.".to_string())
 }
 
@@ -74,6 +88,7 @@ pub fn install_app() -> Result<(), String> {
     let install_script_url = "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.sh";
 
     // Download and execute the install script
+    println!("Executing install script from: {}", install_script_url);
     let output = Command::new("bash")
         .arg("-c")
         .arg(format!("curl -L {} | bash", install_script_url))
@@ -84,7 +99,9 @@ pub fn install_app() -> Result<(), String> {
         println!("Installation script executed successfully.");
         Ok(())
     } else {
-        Err(format!("Installation script failed: {}", String::from_utf8_lossy(&output.stderr)))
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        eprintln!("Installation script failed. Stderr: {}", stderr);
+        Err(format!("Installation script failed: {}", stderr))
     }
 }
 
@@ -101,7 +118,7 @@ pub async fn check_and_update() {
                         println!("Update available! Initiating update process...");
                         if let Err(e) = uninstall_app() {
                             eprintln!("Uninstall failed: {}", e);
-                            return;
+                            // Continue with install even if uninstall fails, as it might be a fresh install or app not found
                         }
                         if let Err(e) = install_app() {
                             eprintln!("Install failed: {}", e);
@@ -118,3 +135,4 @@ pub async fn check_and_update() {
         Err(e) => eprintln!("Failed to get current version: {}", e),
     }
 }
+
