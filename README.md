@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://myferr.foo.ng/cdn/01K248XAFDVP2GXCTKPD5A4ESY/zama_showcase.png" alt="Showcase" width=800 height=800 />
+  <img src="https://github.com/user-attachments/assets/167a8682-199e-4839-8f0b-499bdd85cfc7" alt="Showcase" width=800 height=800 />
 
   # `Zama`
   ## Run local, private LLMs offline using Ollama
