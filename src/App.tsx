@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/select";
 import ChatPage from "@/pages/ChatPage";
 import ModelsPage from "@/pages/ModelsPage";
+import HistoryPage from "@/pages/HistoryPage";
+import { ChatHistoryProvider } from "@/contexts/ChatHistoryContext";
 
 import { OllamaClient } from "../lib/client";
 import type { OllamaModel } from "$/lib/schemas/client.schema";
@@ -20,6 +22,7 @@ import LibraryPage from "@/pages/LibraryPage";
 import { VscLibrary } from "react-icons/vsc";
 import { SiRobotframework } from "react-icons/si";
 import { MdChatBubbleOutline } from "react-icons/md";
+import { History } from "lucide-react";
 
 interface PageConfig {
   id: string;
@@ -59,10 +62,30 @@ const pageConfigs: PageConfig[] = [
     icon: <VscLibrary />,
     component: () => <LibraryPage />,
   },
+  {
+    id: "history",
+    name: "History",
+    icon: <History />,
+    component: () => <HistoryPage />,
+  },
 ];
 
 export default function App() {
   const [page, setPage] = useState<string>(pageConfigs[0].id);
+  
+  // Listen for navigation events from history page
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'chat') {
+        setPage('chat');
+        window.location.hash = ''; // Clear hash
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
   const [loadedModel, setLoadedModel] = useState<{ name: string } | null>(null);
   const [contextLength, setContextLength] = useState<number | null>(null);
   const [temperature, setTemperature] = useState<number>(0.8); // Default temperature
@@ -97,7 +120,8 @@ export default function App() {
   )?.component;
 
   return (
-    <div className="flex h-screen text-white bg-background">
+    <ChatHistoryProvider>
+      <div className="flex h-screen text-white bg-background">
       {/* Left Sidebar */}
       <aside className="w-56 bg-card p-4 border-r border-border">
         <h2 className="text-lg font-semibold mb-4">zama</h2>
@@ -205,6 +229,7 @@ export default function App() {
           </aside>
         </div>
       </main>
-    </div>
+      </div>
+    </ChatHistoryProvider>
   );
 }

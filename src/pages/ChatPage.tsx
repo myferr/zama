@@ -2,18 +2,14 @@
 import { useEffect, useState, useRef } from "preact/hooks";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
+import { useChatHistory, type Message } from "@/contexts/ChatHistoryContext";
 import { OllamaClient } from "$/lib/client";
 import type { ChatRequest } from "$/lib/schemas/client.schema";
-import { SendHorizonal, Copy, Check, Trash2 } from "lucide-react";
+import { SendHorizonal, Copy, Check, MessageCircle, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import * as preact from "preact";
 import remarkGfm from "remark-gfm";
 import { RxGithubLogo } from "react-icons/rx";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
 
 interface ChatPageProps {
   selectedModel: string | null;
@@ -28,164 +24,278 @@ export default function ChatPage({
   temperature,
   systemPrompt,
 }: ChatPageProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(
-    null,
-  );
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { showToast, ToastComponent } = useToast();
+  
+  const {
+    currentConversation,
+    currentConversationId,
+    createNewConversation,
+    addMessageToConversation,
+    updateMessageInConversation,
+  } = useChatHistory();
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [currentConversation?.messages]);
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
     if (!selectedModel) {
-      alert("Please select a model first.");
+      showToast("Please select a model first.", "error");
       return;
     }
 
-    const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput(""); // Clear input immediately
+    // Create new conversation if none exists or if model changed
+    let conversationId = currentConversationId;
+    if (!conversationId || (currentConversation && currentConversation.model !== selectedModel)) {
+      conversationId = createNewConversation(selectedModel);
+    }
+
+    const userMessage: Message = { 
+      role: "user", 
+      content: input.trim(),
+      timestamp: Date.now()
+    };
+
+    const userInput = input.trim();
+    setInput("");
     setLoading(true);
 
-    const assistantMessageIndex = messages.length + 1; // Index where the assistant message will start
+    // Calculate the position where the assistant message will be added
+    const currentMessageCount = (currentConversation?.messages.length || 0);
+    const assistantMessageIndex = currentMessageCount + 1;
 
-    // Add a placeholder for the assistant's response
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+    // Add user message to conversation
+    addMessageToConversation(conversationId, userMessage);
 
+    // Build message history for API call - include ALL previous messages for context
     const messagesToSend = [];
     if (systemPrompt) {
       messagesToSend.push({ role: "system", content: systemPrompt });
     }
-    messagesToSend.push({ role: "user", content: userMessage.content });
+    
+    // Add all messages from current conversation for full context (before adding the new user message)
+    if (currentConversation) {
+      for (const msg of currentConversation.messages) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messagesToSend.push({
+            role: msg.role,
+            content: msg.content
+          });
+        }
+      }
+    }
+    
+    // Add the new user message to the API call
+    messagesToSend.push({ role: "user", content: userInput });
+
+    // Create placeholder assistant message
+    const assistantMessage: Message = {
+      role: "assistant",
+      content: "",
+      timestamp: Date.now()
+    };
+    addMessageToConversation(conversationId, assistantMessage);
 
     try {
+      let assistantResponse = "";
+      
       for await (const chunk of OllamaClient.chatStream({
-        model: selectedModel!, // selectedModel is guaranteed to be non-null here
+        model: selectedModel,
         messages: messagesToSend,
         options: {
           num_ctx: contextLength || undefined,
           temperature: temperature,
         },
       } as ChatRequest)) {
-        // Cast to ChatRequest as chatStream expects it
-        setMessages((prev) => {
-          const newMessages = [...prev];
-          // Append content to the last assistant message
-          newMessages[assistantMessageIndex].content += chunk.message.content;
-          return newMessages;
-        });
+        assistantResponse += chunk.message.content;
+        
+        // Update the assistant message in the conversation
+        updateMessageInConversation(conversationId, assistantMessageIndex, assistantResponse);
       }
-    } catch (err) {
-      console.error("Chat stream error:", err);
-      // Optionally, add an error message to the chat
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error: Could not get a response." },
-      ]);
+
+    } catch (error) {
+      console.error("Error during chat:", error);
+      showToast("Failed to send message. Please try again.", "error");
+      
+      // Update assistant message with error
+      updateMessageInConversation(conversationId, assistantMessageIndex, "Sorry, I encountered an error. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight });
-  }, [messages]);
+  const handleCopy = async (content: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageIndex(index);
+      setTimeout(() => setCopiedMessageIndex(null), 2000);
+    } catch (err) {
+      showToast("Failed to copy message", "error");
+    }
+  };
+
+  const handleKeyPress = (e: KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  const handleNewConversation = () => {
+    if (!selectedModel) {
+      showToast("Please select a model first.", "error");
+      return;
+    }
+    createNewConversation(selectedModel);
+  };
+
+  const messages = currentConversation?.messages || [];
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold">
+            {currentConversation?.title || "Chat"}
+          </h1>
+          {currentConversation && (
+            <span className="text-sm text-muted-foreground">
+              {currentConversation.model}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNewConversation}
+            disabled={!selectedModel}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            New Chat
+          </Button>
+        </div>
+      </div>
+
+      {/* Messages */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scrollbar-thin scrollbar-thumb-violet-500"
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-center">
-            <h2 className="text-2xl font-semibold mb-2 text-white">
-              Welcome to Zama
-            </h2>
-            <p>Start a conversation by typing a message below</p>
-            <p>Make sure you have a model installed in the Library tab</p>
-            <span className={"mt-2"}>
-              <a href={"https://github.com/myferr/zama"} target={"_blank"}>
-                <RxGithubLogo color="white" size={26} />
-              </a>
-            </span>
+            <MessageCircle size={48} className="mb-4 opacity-50" />
+            <h2 className="text-xl font-semibold mb-2">Start a conversation</h2>
+            <p className="mb-4">
+              {selectedModel
+                ? `Chat with ${selectedModel}. Your conversation will continue with full context.`
+                : "Select a model to start chatting"}
+            </p>
+            <div className="flex items-center gap-2 text-sm">
+              <RxGithubLogo size={16} />
+              <span>Powered by Ollama</span>
+            </div>
           </div>
         ) : (
-          messages.map((msg, i) => (
+          messages.map((message, index) => (
             <div
-              key={i}
-              className={`rounded-lg p-3 max-w-xl ${
-                msg.role === "user"
-                  ? "bg-violet-700 text-white self-end ml-auto"
-                  : "bg-card text-foreground self-start mr-auto"
+              key={`${message.timestamp}-${index}`}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              <div>
-                {msg.role === "assistant" ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.content}
-                  </ReactMarkdown>
+              <div
+                className={`max-w-[80%] rounded-lg px-4 py-2 relative group ${
+                  message.role === "user"
+                    ? "bg-primary text-primary-foreground ml-12"
+                    : "bg-muted text-muted-foreground mr-12"
+                }`}
+              >
+                {message.role === "assistant" ? (
+                  <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground prose-blockquote:text-foreground prose-code:text-foreground prose-pre:text-foreground">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        h1: ({children}) => <h1 className="text-xl font-bold mb-2 mt-4">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-base font-bold mb-1 mt-2">{children}</h3>,
+                        h4: ({children}) => <h4 className="text-sm font-bold mb-1 mt-2">{children}</h4>,
+                        h5: ({children}) => <h5 className="text-sm font-semibold mb-1 mt-2">{children}</h5>,
+                        h6: ({children}) => <h6 className="text-xs font-semibold mb-1 mt-2">{children}</h6>,
+                        p: ({children}) => <p className="mb-2">{children}</p>,
+                        ul: ({children}) => <ul className="list-disc list-inside mb-2">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal list-inside mb-2">{children}</ol>,
+                        li: ({children}) => <li className="mb-1">{children}</li>,
+                        strong: ({children}) => <strong className="font-bold">{children}</strong>,
+                        em: ({children}) => <em className="italic">{children}</em>,
+                        blockquote: ({children}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-2">{children}</blockquote>,
+                        code: ({children, className}) => {
+                          const isInline = !className;
+                          return isInline ? (
+                            <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">{children}</code>
+                          ) : (
+                            <code className={className}>{children}</code>
+                          );
+                        },
+                        pre: ({children}) => <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md overflow-x-auto my-2">{children}</pre>,
+                      }}
+                    >
+                      {message.content || (loading && index === messages.length - 1 ? "..." : "")}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
-                  msg.content
+                  <p className="whitespace-pre-wrap">{message.content}</p>
                 )}
-              </div>
-              {msg.role === "assistant" && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(msg.content);
-                    setCopiedMessageIndex(i);
-                    setTimeout(() => setCopiedMessageIndex(null), 2000); // Reset after 2 seconds
-                  }}
-                  className="mt-2"
+                  className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                  onClick={() => handleCopy(message.content, index)}
                 >
-                  {copiedMessageIndex === i ? (
-                    <Check className="w-4 h-4 text-green-500" />
+                  {copiedMessageIndex === index ? (
+                    <Check className="w-3 h-3" />
                   ) : (
-                    <Copy className="w-4 h-4" />
+                    <Copy className="w-3 h-3" />
                   )}
                 </Button>
-              )}
+              </div>
             </div>
           ))
         )}
-        {loading && messages.length > 0 && (
-          <div className="text-muted-foreground italic animate-pulse">
-            Generating...
-          </div>
-        )}
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Input */}
+      <div className="flex gap-2">
         <Input
-          className="flex-1 bg-input text-foreground border-border"
           value={input}
-          onInput={(e) => setInput(e.currentTarget.value)}
-          onKeyDown={(
-            e: preact.JSX.TargetedEvent<HTMLInputElement, KeyboardEvent>,
-          ) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSubmit();
-            }
-          }}
-          placeholder="Ask something..."
+          onChange={(e) => setInput(e.currentTarget.value)}
+          onKeyPress={handleKeyPress}
+          placeholder={
+            selectedModel
+              ? "Type your message..."
+              : "Select a model to start chatting"
+          }
+          disabled={loading || !selectedModel}
+          className="flex-1"
         />
-        <Button onClick={handleSubmit} disabled={loading}>
-          <SendHorizonal className="w-4 h-4 mr-1" />
-          Send
-        </Button>
         <Button
-          variant="outline"
-          onClick={() => setMessages([])}
-          disabled={messages.length === 0}
+          onClick={handleSubmit}
+          disabled={loading || !input.trim() || !selectedModel}
         >
-          <Trash2 className="w-4 h-4 mr-1" />
-          Clear Chat
+          <SendHorizonal className="w-4 h-4" />
         </Button>
       </div>
+
+      {ToastComponent}
     </div>
   );
 }

@@ -3,11 +3,13 @@ import { useEffect, useState } from "preact/hooks";
 import { OllamaClient } from "$/lib/client";
 import type { ListModelsResponse } from "$/lib/schemas/client.schema";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { Trash2, RefreshCcw } from "lucide-react";
 
 export default function ModelsPage() {
   const [models, setModels] = useState<ListModelsResponse["models"]>([]);
   const [loading, setLoading] = useState(false);
+  const { showToast, ToastComponent } = useToast();
   
 
   const fetchModels = async () => {
@@ -26,8 +28,9 @@ export default function ModelsPage() {
     try {
       await OllamaClient.deleteModel({ name });
       setModels((prev) => prev.filter((m) => m.name !== name));
+      showToast(`Successfully deleted ${name}`, "success");
     } catch (err) {
-      alert(`Failed to delete ${name}`);
+      showToast(`Failed to delete ${name}`, "error");
     }
   };
 
@@ -71,6 +74,7 @@ export default function ModelsPage() {
           ))}
         </ul>
       )}
+      {ToastComponent}
     </div>
   );
 }
