@@ -10,6 +10,7 @@
 ![Repo Size](https://img.shields.io/github/repo-size/myferr/zama?logo=github&style=for-the-badge)
 ![Built with](https://img.shields.io/badge/built%20with-Tauri-blue?logo=tauri&style=for-the-badge)
 ![Frontend](https://img.shields.io/badge/frontend-Preact-673AB8?logo=preact&style=for-the-badge)
+[![Build](https://github.com/myferr/zama/actions/workflows/build.yml/badge.svg)](https://github.com/myferr/zama/actions/workflows/build.yml)
 
 </div>
 
