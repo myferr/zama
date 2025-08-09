@@ -18,13 +18,14 @@ Zama is a cross-platform lightweight desktop application to manage and chat with
 The only feature that requires you to be connected to the internet is **model lookup** and **model installation**.
 
 ### Features
-* Model library
-* Model installation
-* Model chat
-* Temperature, context length, and system prompt customization
-* Model selection
-* Response copy (small clipboard icon under model responses)
-* Model removing/deletation
+* Browse model library
+* Install models
+* Chat with models
+* Customize temperature, context length, and system prompt
+* Select models
+* Copy responses (clipboard icon under model responses)
+* Remove/delete models
+
 and more to come soon!
 
 ### Running Zama
@@ -39,7 +40,7 @@ curl -L https://raw.githubusercontent.com/myferr/zama/main/scripts/install.sh | 
 
 **PowerShell/Windows:** (Requires PowerShell 7 or later)
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.ps1" -OutFile install.ps1; .\install.ps1; Remove-Item install.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.ps1" -OutFile install.ps1; .\install.ps1; Remove-Item install.ps1; setx OLLAMA_ORIGINS "*"
 ```
 
 #### Building from source
