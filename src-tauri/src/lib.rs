@@ -1,9 +1,9 @@
 use reqwest;
-
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command as TokioCommand;
+use tokio::time::{timeout, Duration};
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/ 
+// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -16,10 +16,15 @@ async fn get_ollama_models() -> Result<String, String> {
         .map_err(|e| format!("Failed to fetch from ollamadb.dev: {}", e.to_string()))?;
 
     if !res.status().is_success() {
-        return Err(format!("OllamaDB API returned non-success status: {}", res.status()));
+        return Err(format!(
+            "OllamaDB API returned non-success status: {}",
+            res.status()
+        ));
     }
 
-    res.text().await.map_err(|e| format!("Failed to read response text: {}", e.to_string()))
+    res.text()
+        .await
+        .map_err(|e| format!("Failed to read response text: {}", e.to_string()))
 }
 
 #[tauri::command]
@@ -67,12 +72,57 @@ async fn pull_model(model_name: String) -> Result<String, String> {
         }
     }
 
-    let status = command.wait().await.map_err(|e| format!("Failed to wait for ollama process: {}", e.to_string()))?;
+    let status = command
+        .wait()
+        .await
+        .map_err(|e| format!("Failed to wait for ollama process: {}", e.to_string()))?;
 
     if status.success() {
-        Ok(format!("Model {} pulled successfully.\n{}", model_name, output))
+        Ok(format!(
+            "Model {} pulled successfully.\n{}",
+            model_name, output
+        ))
     } else {
-        Err(format!("Failed to pull model {}: {}\n{}", model_name, status, output))
+        Err(format!(
+            "Failed to pull model {}: {}\n{}",
+            model_name, status, output
+        ))
+    }
+}
+
+#[tauri::command]
+async fn check_ollama_status() -> Result<String, String> {
+    _check_and_start_ollama_logic().await
+}
+
+async fn _check_and_start_ollama_logic() -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let ollama_url = "http://localhost:11434";
+
+    // Check if Ollama is already running
+    match timeout(Duration::from_secs(1), client.get(ollama_url).send()).await {
+        Ok(Ok(res)) if res.status().is_success() => {
+            return Ok("Ollama server is already running.".to_string());
+        }
+        _ => {
+            // Ollama is not running, try to start it
+            println!("Ollama server not found, attempting to start...");
+            TokioCommand::new("ollama")
+                .arg("serve")
+                .spawn()
+                .map_err(|e| format!("Failed to spawn ollama serve process: {}", e.to_string()))?;
+
+            // Give Ollama some time to start up
+            tokio::time::sleep(Duration::from_secs(5)).await;
+
+            // Verify if Ollama started successfully
+            match timeout(Duration::from_secs(5), client.get(ollama_url).send()).await {
+                Ok(Ok(res)) if res.status().is_success() => {
+                    Ok("Ollama server started successfully.".to_string())
+                }
+                _ => Err("Failed to start Ollama server or it did not respond.".to_string()),
+            }
+        }
     }
 }
 
@@ -80,7 +130,22 @@ async fn pull_model(model_name: String) -> Result<String, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_ollama_models, pull_model])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            get_ollama_models,
+            pull_model,
+            check_ollama_status
+        ])
+        .setup(|_app| {
+            #[cfg(desktop)]
+            tauri::async_runtime::spawn(async move {
+                match _check_and_start_ollama_logic().await {
+                    Ok(msg) => println!("Ollama status: {}", msg),
+                    Err(e) => eprintln!("Error checking/starting Ollama: {}", e),
+                }
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
