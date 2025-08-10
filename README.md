@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/167a8682-199e-4839-8f0b-499bdd85cfc7" alt="Showcase" width=800 height=800 />
+  <img src="https://github.com/user-attachments/assets/50986c16-1922-43d7-927a-c0c6296eaffd" alt="Showcase" width=800 height=800 />
 
   # `Zama`
   ## Run local, private LLMs offline using Ollama
