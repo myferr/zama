@@ -4,37 +4,37 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    --background: rgb(14, 19, 24);
-    --foreground: rgb(220, 220, 220);
-    --card: rgb(20, 26, 30);
-    --card-foreground: rgb(220, 220, 220);
-    --popover: rgb(20, 26, 30);
-    --popover-foreground: rgb(220, 220, 220);
+    --background: rgb(255, 255, 255);
+    --foreground: rgb(0, 0, 0);
+    --card: rgb(240, 240, 240);
+    --card-foreground: rgb(0, 0, 0);
+    --popover: rgb(240, 240, 240);
+    --popover-foreground: rgb(0, 0, 0);
     --primary: oklch(0.50 0.20 300);
     --primary-foreground: rgb(255, 255, 255);
-    --secondary: rgb(17, 23, 27);
-    --secondary-foreground: rgb(180, 180, 180);
-    --muted: rgb(30, 36, 40);
-    --muted-foreground: rgb(120, 120, 120);
+    --secondary: rgb(230, 230, 230);
+    --secondary-foreground: rgb(0, 0, 0);
+    --muted: rgb(230, 230, 230);
+    --muted-foreground: rgb(100, 100, 100);
     --accent: oklch(0.90 0.05 300);
     --accent-foreground: oklch(0.20 0.05 300);
     --destructive: oklch(0.60 0.20 20);
     --destructive-foreground: rgb(255, 255, 255);
-    --border: rgb(25, 32, 38);
-    --input: rgb(25, 32, 38);
+    --border: rgb(220, 220, 220);
+    --input: rgb(220, 220, 220);
     --ring: oklch(0.50 0.20 300);
     --chart-1: oklch(0.50 0.20 300);
     --chart-2: oklch(0.45 0.20 300);
     --chart-3: oklch(0.40 0.20 300);
     --chart-4: oklch(0.35 0.20 300);
     --chart-5: oklch(0.30 0.20 300);
-    --sidebar: rgb(17, 23, 27);
-    --sidebar-foreground: rgb(220, 220, 220);
+    --sidebar: rgb(230, 230, 230);
+    --sidebar-foreground: rgb(0, 0, 0);
     --sidebar-primary: oklch(0.50 0.20 300);
     --sidebar-primary-foreground: rgb(255, 255, 255);
     --sidebar-accent: oklch(0.90 0.05 300);
     --sidebar-accent-foreground: oklch(0.20 0.05 300);
-    --sidebar-border: rgb(25, 32, 38);
+    --sidebar-border: rgb(220, 220, 220);
     --sidebar-ring: oklch(0.50 0.20 300);
     --font-sans: Inter, sans-serif;
     --font-serif: Merriweather, serif;
@@ -58,7 +58,7 @@
     --spacing: 0.25rem;
 }
 
-* {
+.dark {
     --background: rgb(14, 19, 24);
     --foreground: rgb(220, 220, 220);
     --card: rgb(20, 26, 30);
@@ -91,26 +91,10 @@
     --sidebar-accent-foreground: oklch(0.90 0.05 300);
     --sidebar-border: rgb(25, 32, 38);
     --sidebar-ring: oklch(0.50 0.20 300);
-    --font-sans: Inter, sans-serif;
-    --font-serif: Merriweather, serif;
-    --font-mono: JetBrains Mono, monospace;
-    --radius: 0.75rem;
-    --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-    --shadow-sm:
-        0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 1px 2px -2px hsl(0 0% 0% / 0.1);
-    --shadow:
-        0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 1px 2px -2px hsl(0 0% 0% / 0.1);
-    --shadow-md:
-        0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 2px 4px -2px hsl(0 0% 0% / 0.1);
-    --shadow-lg:
-        0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 4px 6px -2px hsl(0 0% 0% / 0.1);
-    --shadow-xl:
-        0px 4px 8px -1px hsl(0 0% 0% / 0.1),
-        0px 8px 10px -2px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
-    --tracking-normal: 0em;
-    --spacing: 0.25rem;
+}
+
+.light * {
+    color: black;
 }
 
 @theme inline {
