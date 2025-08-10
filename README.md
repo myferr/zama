@@ -28,6 +28,9 @@ The only feature that requires you to be connected to the internet is **model lo
 * Remove/delete models
 * Auto update
 * Ollama status check and auto-start functionality
+* Dark/light mode support
+* Chat history
+* Markdown support
 
 and more to come soon!
 
