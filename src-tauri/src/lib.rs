@@ -129,6 +129,7 @@ async fn check_ollama_status() -> Result<String, String> {
 }
 
 async fn _check_and_start_ollama_logic() -> Result<String, String> {
+    println!("Attempting to check/start Ollama server...");
     let client = reqwest::Client::new();
     let ollama_url = "http://localhost:11434";
 
