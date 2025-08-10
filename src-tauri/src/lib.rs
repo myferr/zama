@@ -36,8 +36,32 @@ async fn get_ollama_models() -> Result<String, String> {
         })
 }
 
+// Input validation helper
+fn validate_model_name(name: &str) -> Result<(), String> {
+    if name.is_empty() {
+        return Err("Model name cannot be empty".to_string());
+    }
+    if name.len() > 200 {
+        return Err("Model name is too long (max 200 characters)".to_string());
+    }
+    if name.trim() != name {
+        return Err("Model name cannot have leading or trailing whitespace".to_string());
+    }
+    // Prevent basic injection attempts
+    if name.contains(['<', '>', '"', '\'', '&', ';', '|', '`', '$']) {
+        return Err("Model name contains invalid characters".to_string());
+    }
+    // Ensure it looks like a valid model name (alphanumeric, hyphens, underscores, colons for tags, dots for versions)
+    if !name.chars().all(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | ':' | '.' | '/')) {
+        return Err("Model name contains invalid characters".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn pull_model(model_name: String) -> Result<String, String> {
+    // Validate input
+    validate_model_name(&model_name)?;
     let mut command = TokioCommand::new("ollama")
         .arg("pull")
         .arg(&model_name)
@@ -88,7 +112,7 @@ async fn pull_model(model_name: String) -> Result<String, String> {
 
     if status.success() {
         Ok(format!(
-            "Model {} pulled successfully.\n fonbet{}",
+            "Model {} pulled successfully.\n{}",
             model_name, output
         ))
     } else {
