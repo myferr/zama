@@ -147,22 +147,23 @@ export function ChatHistoryProvider({ children }: { children: preact.ComponentCh
   };
 
   const deleteConversation = (conversationId: string) => {
-    setConversations(prev => prev.filter(c => c.id !== conversationId));
-    
-    // If we deleted the current conversation, switch to the most recent remaining one
-    if (currentConversationId === conversationId) {
-      setConversations(prev => {
-        if (prev.length > 0) {
-          const mostRecent = prev.reduce((prev, curr) => 
+    setConversations(prev => {
+      const filtered = prev.filter(c => c.id !== conversationId);
+      
+      // If we deleted the current conversation, switch to the most recent remaining one
+      if (currentConversationId === conversationId) {
+        if (filtered.length > 0) {
+          const mostRecent = filtered.reduce((prev, curr) => 
             curr.updatedAt > prev.updatedAt ? curr : prev
           );
           setCurrentConversationId(mostRecent.id);
         } else {
           setCurrentConversationId(null);
         }
-        return prev;
-      });
-    }
+      }
+      
+      return filtered;
+    });
   };
 
   const clearAllConversations = () => {

@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import { useChatHistory } from "@/contexts/ChatHistoryContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { MessageCircle, Trash2, Edit3, Check, X, MessageSquare } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,6 +16,7 @@ export default function HistoryPage() {
     clearAllConversations,
   } = useChatHistory();
   
+  const { showToast, ToastComponent } = useToast();
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
@@ -76,6 +78,7 @@ export default function HistoryPage() {
               onClick={() => {
                 if (confirm("Delete all conversations? This cannot be undone.")) {
                   clearAllConversations();
+                  showToast("All conversations deleted", "success");
                 }
               }}
               variant="destructive"
@@ -177,6 +180,7 @@ export default function HistoryPage() {
                       onClick={() => {
                         if (confirm("Delete this conversation?")) {
                           deleteConversation(conversation.id);
+                          showToast("Conversation deleted", "success");
                         }
                       }}
                     >
@@ -258,6 +262,8 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
+      
+      {ToastComponent}
     </div>
   );
 }

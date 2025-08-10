@@ -54,8 +54,10 @@ export default function ChatPage({
 
     // Create new conversation if none exists or if model changed
     let conversationId = currentConversationId;
+    let conversationToUse = currentConversation;
     if (!conversationId || (currentConversation && currentConversation.model !== selectedModel)) {
       conversationId = createNewConversation(selectedModel);
+      conversationToUse = null; // New conversation, no previous messages
     }
 
     const userMessage: Message = { 
@@ -69,7 +71,7 @@ export default function ChatPage({
     setLoading(true);
 
     // Calculate the position where the assistant message will be added
-    const currentMessageCount = (currentConversation?.messages.length || 0);
+    const currentMessageCount = (conversationToUse?.messages.length || 0);
     const assistantMessageIndex = currentMessageCount + 1;
 
     // Add user message to conversation
@@ -82,8 +84,8 @@ export default function ChatPage({
     }
     
     // Add all messages from current conversation for full context (before adding the new user message)
-    if (currentConversation) {
-      for (const msg of currentConversation.messages) {
+    if (conversationToUse) {
+      for (const msg of conversationToUse.messages) {
         if (msg.role === "user" || msg.role === "assistant") {
           messagesToSend.push({
             role: msg.role,
