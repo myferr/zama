@@ -3,7 +3,14 @@ import { useChatHistory } from "@/contexts/ChatHistoryContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { MessageCircle, Trash2, Edit3, Check, X, MessageSquare } from "lucide-react";
+import {
+  MessageCircle,
+  Trash2,
+  Edit3,
+  Check,
+  X,
+  MessageSquare,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -15,11 +22,15 @@ export default function HistoryPage() {
     updateConversationTitle,
     clearAllConversations,
   } = useChatHistory();
-  
+
   const { showToast, ToastComponent } = useToast();
-  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingConversationId, setEditingConversationId] = useState<
+    string | null
+  >(null);
   const [editTitle, setEditTitle] = useState("");
-  const [expandedConversation, setExpandedConversation] = useState<string | null>(null);
+  const [expandedConversation, setExpandedConversation] = useState<
+    string | null
+  >(null);
 
   const handleEditTitle = (conversationId: string, currentTitle: string) => {
     setEditingConversationId(conversationId);
@@ -41,25 +52,25 @@ export default function HistoryPage() {
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString([], { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return date.toLocaleDateString([], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const toggleExpanded = (conversationId: string) => {
     setExpandedConversation(
-      expandedConversation === conversationId ? null : conversationId
+      expandedConversation === conversationId ? null : conversationId,
     );
   };
 
   const handleContinueConversation = (conversationId: string) => {
     switchToConversation(conversationId);
     // Switch to chat tab (we'll need to add this functionality)
-    window.location.hash = '#chat'; // Simple way to navigate for now
+    window.location.hash = "#chat"; // Simple way to navigate for now
   };
 
   return (
@@ -70,16 +81,15 @@ export default function HistoryPage() {
           <div>
             <h1 className="text-2xl font-bold">Chat History</h1>
             <p className="text-muted-foreground mt-1">
-              {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+              {conversations.length} conversation
+              {conversations.length !== 1 ? "s" : ""}
             </p>
           </div>
           {conversations.length > 0 && (
             <Button
               onClick={() => {
-                if (confirm("Delete all conversations? This cannot be undone.")) {
-                  clearAllConversations();
-                  showToast("All conversations deleted", "success");
-                }
+                clearAllConversations();
+                showToast("All conversations deleted", "success");
               }}
               variant="destructive"
               size="sm"
@@ -116,8 +126,8 @@ export default function HistoryPage() {
                           onChange={(e) => setEditTitle(e.currentTarget.value)}
                           className="h-8"
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveTitle();
-                            if (e.key === 'Escape') handleCancelEdit();
+                            if (e.key === "Enter") handleSaveTitle();
+                            if (e.key === "Escape") handleCancelEdit();
                           }}
                           autoFocus
                         />
@@ -139,7 +149,9 @@ export default function HistoryPage() {
                       </div>
                     ) : (
                       <div>
-                        <h3 className="font-semibold text-lg mb-1">{conversation.title}</h3>
+                        <h3 className="font-semibold text-lg mb-1">
+                          {conversation.title}
+                        </h3>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                           <span>{conversation.model}</span>
                           <span>•</span>
@@ -150,12 +162,14 @@ export default function HistoryPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="default"
-                      onClick={() => handleContinueConversation(conversation.id)}
+                      onClick={() =>
+                        handleContinueConversation(conversation.id)
+                      }
                     >
                       <MessageSquare size={14} className="mr-1" />
                       Continue
@@ -163,7 +177,9 @@ export default function HistoryPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleEditTitle(conversation.id, conversation.title)}
+                      onClick={() =>
+                        handleEditTitle(conversation.id, conversation.title)
+                      }
                     >
                       <Edit3 size={14} />
                     </Button>
@@ -172,16 +188,16 @@ export default function HistoryPage() {
                       variant="ghost"
                       onClick={() => toggleExpanded(conversation.id)}
                     >
-                      {expandedConversation === conversation.id ? "Collapse" : "View"}
+                      {expandedConversation === conversation.id
+                        ? "Collapse"
+                        : "View"}
                     </Button>
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => {
-                        if (confirm("Delete this conversation?")) {
-                          deleteConversation(conversation.id);
-                          showToast("Conversation deleted", "success");
-                        }
+                        deleteConversation(conversation.id);
+                        showToast("Conversation deleted", "success");
                       }}
                     >
                       <Trash2 size={14} />
@@ -196,7 +212,9 @@ export default function HistoryPage() {
                       <div
                         key={`${message.timestamp}-${index}`}
                         className={`flex ${
-                          message.role === "user" ? "justify-end" : "justify-start"
+                          message.role === "user"
+                            ? "justify-end"
+                            : "justify-start"
                         }`}
                       >
                         <div
@@ -208,38 +226,92 @@ export default function HistoryPage() {
                         >
                           {message.role === "assistant" ? (
                             <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground prose-blockquote:text-foreground prose-code:text-foreground prose-pre:text-foreground">
-                              <ReactMarkdown 
+                              <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
-                                  h1: ({children}) => <h1 className="text-lg font-bold mb-2 mt-3">{children}</h1>,
-                                  h2: ({children}) => <h2 className="text-base font-bold mb-1 mt-2">{children}</h2>,
-                                  h3: ({children}) => <h3 className="text-sm font-bold mb-1 mt-2">{children}</h3>,
-                                  h4: ({children}) => <h4 className="text-sm font-semibold mb-1 mt-1">{children}</h4>,
-                                  h5: ({children}) => <h5 className="text-xs font-semibold mb-1 mt-1">{children}</h5>,
-                                  h6: ({children}) => <h6 className="text-xs font-semibold mb-1 mt-1">{children}</h6>,
-                                  p: ({children}) => <p className="mb-1">{children}</p>,
-                                  ul: ({children}) => <ul className="list-disc list-inside mb-1">{children}</ul>,
-                                  ol: ({children}) => <ol className="list-decimal list-inside mb-1">{children}</ol>,
-                                  li: ({children}) => <li>{children}</li>,
-                                  strong: ({children}) => <strong className="font-bold">{children}</strong>,
-                                  em: ({children}) => <em className="italic">{children}</em>,
-                                  blockquote: ({children}) => <blockquote className="border-l-2 border-gray-300 pl-2 italic my-1">{children}</blockquote>,
-                                  code: ({children, className}) => {
+                                  h1: ({ children }) => (
+                                    <h1 className="text-lg font-bold mb-2 mt-3">
+                                      {children}
+                                    </h1>
+                                  ),
+                                  h2: ({ children }) => (
+                                    <h2 className="text-base font-bold mb-1 mt-2">
+                                      {children}
+                                    </h2>
+                                  ),
+                                  h3: ({ children }) => (
+                                    <h3 className="text-sm font-bold mb-1 mt-2">
+                                      {children}
+                                    </h3>
+                                  ),
+                                  h4: ({ children }) => (
+                                    <h4 className="text-sm font-semibold mb-1 mt-1">
+                                      {children}
+                                    </h4>
+                                  ),
+                                  h5: ({ children }) => (
+                                    <h5 className="text-xs font-semibold mb-1 mt-1">
+                                      {children}
+                                    </h5>
+                                  ),
+                                  h6: ({ children }) => (
+                                    <h6 className="text-xs font-semibold mb-1 mt-1">
+                                      {children}
+                                    </h6>
+                                  ),
+                                  p: ({ children }) => (
+                                    <p className="mb-1">{children}</p>
+                                  ),
+                                  ul: ({ children }) => (
+                                    <ul className="list-disc list-inside mb-1">
+                                      {children}
+                                    </ul>
+                                  ),
+                                  ol: ({ children }) => (
+                                    <ol className="list-decimal list-inside mb-1">
+                                      {children}
+                                    </ol>
+                                  ),
+                                  li: ({ children }) => <li>{children}</li>,
+                                  strong: ({ children }) => (
+                                    <strong className="font-bold">
+                                      {children}
+                                    </strong>
+                                  ),
+                                  em: ({ children }) => (
+                                    <em className="italic">{children}</em>
+                                  ),
+                                  blockquote: ({ children }) => (
+                                    <blockquote className="border-l-2 border-gray-300 pl-2 italic my-1">
+                                      {children}
+                                    </blockquote>
+                                  ),
+                                  code: ({ children, className }) => {
                                     const isInline = !className;
                                     return isInline ? (
-                                      <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                                      <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono">
+                                        {children}
+                                      </code>
                                     ) : (
-                                      <code className={className}>{children}</code>
+                                      <code className={className}>
+                                        {children}
+                                      </code>
                                     );
                                   },
-                                  pre: ({children}) => <pre className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs overflow-x-auto my-1">{children}</pre>,
+                                  pre: ({ children }) => (
+                                    <pre className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs overflow-x-auto my-1">
+                                      {children}
+                                    </pre>
+                                  ),
                                 }}
                               >
                                 {message.content}
                               </ReactMarkdown>
                             </div>
                           ) : (
-                            <p className="whitespace-pre-wrap">{message.content}</p>
+                            <p className="whitespace-pre-wrap">
+                              {message.content}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -250,9 +322,18 @@ export default function HistoryPage() {
                     <div className="mt-3 p-3 bg-muted/50 rounded text-sm">
                       <p className="truncate">
                         <span className="font-medium">
-                          {conversation.messages[conversation.messages.length - 1]?.role === "user" ? "You" : "Assistant"}:
+                          {conversation.messages[
+                            conversation.messages.length - 1
+                          ]?.role === "user"
+                            ? "You"
+                            : "Assistant"}
+                          :
                         </span>{" "}
-                        {conversation.messages[conversation.messages.length - 1]?.content}
+                        {
+                          conversation.messages[
+                            conversation.messages.length - 1
+                          ]?.content
+                        }
                       </p>
                     </div>
                   )
@@ -262,7 +343,7 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
-      
+
       {ToastComponent}
     </div>
   );

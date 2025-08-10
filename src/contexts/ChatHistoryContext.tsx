@@ -23,13 +23,19 @@ interface ChatHistoryContextType {
   createNewConversation: (model: string) => string;
   switchToConversation: (conversationId: string) => void;
   addMessageToConversation: (conversationId: string, message: Message) => void;
-  updateMessageInConversation: (conversationId: string, messageIndex: number, content: string) => void;
+  updateMessageInConversation: (
+    conversationId: string,
+    messageIndex: number,
+    content: string,
+  ) => void;
   updateConversationTitle: (conversationId: string, title: string) => void;
   deleteConversation: (conversationId: string) => void;
   clearAllConversations: () => void;
 }
 
-const ChatHistoryContext = createContext<ChatHistoryContextType | undefined>(undefined);
+const ChatHistoryContext = createContext<ChatHistoryContextType | undefined>(
+  undefined,
+);
 
 const STORAGE_KEY = "zama_chat_history";
 
@@ -43,9 +49,15 @@ function generateTitleFromMessage(content: string): string {
   return cleaned.length > 40 ? cleaned.substring(0, 40) + "..." : cleaned;
 }
 
-export function ChatHistoryProvider({ children }: { children: preact.ComponentChildren }) {
+export function ChatHistoryProvider({
+  children,
+}: {
+  children: preact.ComponentChildren;
+}) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | null
+  >(null);
 
   // Load conversations from localStorage on mount
   useEffect(() => {
@@ -54,11 +66,11 @@ export function ChatHistoryProvider({ children }: { children: preact.ComponentCh
       if (saved) {
         const parsed = JSON.parse(saved) as Conversation[];
         setConversations(parsed);
-        
+
         // Set the most recent conversation as current
         if (parsed.length > 0) {
-          const mostRecent = parsed.reduce((prev, curr) => 
-            curr.updatedAt > prev.updatedAt ? curr : prev
+          const mostRecent = parsed.reduce((prev, curr) =>
+            curr.updatedAt > prev.updatedAt ? curr : prev,
           );
           setCurrentConversationId(mostRecent.id);
         }
@@ -77,7 +89,8 @@ export function ChatHistoryProvider({ children }: { children: preact.ComponentCh
     }
   }, [conversations]);
 
-  const currentConversation = conversations.find(c => c.id === currentConversationId) || null;
+  const currentConversation =
+    conversations.find((c) => c.id === currentConversationId) || null;
 
   const createNewConversation = (model: string) => {
     const newConversation: Conversation = {
@@ -89,7 +102,7 @@ export function ChatHistoryProvider({ children }: { children: preact.ComponentCh
       updatedAt: Date.now(),
     };
 
-    setConversations(prev => [newConversation, ...prev]);
+    setConversations((prev) => [newConversation, ...prev]);
     setCurrentConversationId(newConversation.id);
     return newConversation.id;
   };
@@ -98,70 +111,83 @@ export function ChatHistoryProvider({ children }: { children: preact.ComponentCh
     setCurrentConversationId(conversationId);
   };
 
-  const addMessageToConversation = (conversationId: string, message: Message) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === conversationId) {
-        const updatedConv = {
-          ...conv,
-          messages: [...conv.messages, message],
-          updatedAt: Date.now(),
-        };
+  const addMessageToConversation = (
+    conversationId: string,
+    message: Message,
+  ) => {
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id === conversationId) {
+          const updatedConv = {
+            ...conv,
+            messages: [...conv.messages, message],
+            updatedAt: Date.now(),
+          };
 
-        // Auto-generate title from first user message
-        if (conv.title === "New Conversation" && message.role === "user") {
-          updatedConv.title = generateTitleFromMessage(message.content);
+          // Auto-generate title from first user message
+          if (conv.title === "New Conversation" && message.role === "user") {
+            updatedConv.title = generateTitleFromMessage(message.content);
+          }
+
+          return updatedConv;
         }
-
-        return updatedConv;
-      }
-      return conv;
-    }));
+        return conv;
+      }),
+    );
   };
 
-  const updateMessageInConversation = (conversationId: string, messageIndex: number, content: string) => {
-    setConversations(prev => prev.map(conv => {
-      if (conv.id === conversationId) {
-        const updatedMessages = [...conv.messages];
-        if (updatedMessages[messageIndex]) {
-          updatedMessages[messageIndex] = {
-            ...updatedMessages[messageIndex],
-            content
+  const updateMessageInConversation = (
+    conversationId: string,
+    messageIndex: number,
+    content: string,
+  ) => {
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv.id === conversationId) {
+          const updatedMessages = [...conv.messages];
+          if (updatedMessages[messageIndex]) {
+            updatedMessages[messageIndex] = {
+              ...updatedMessages[messageIndex],
+              content,
+            };
+          }
+          return {
+            ...conv,
+            messages: updatedMessages,
+            updatedAt: Date.now(),
           };
         }
-        return {
-          ...conv,
-          messages: updatedMessages,
-          updatedAt: Date.now(),
-        };
-      }
-      return conv;
-    }));
+        return conv;
+      }),
+    );
   };
 
   const updateConversationTitle = (conversationId: string, title: string) => {
-    setConversations(prev => prev.map(conv => 
-      conv.id === conversationId 
-        ? { ...conv, title, updatedAt: Date.now() }
-        : conv
-    ));
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === conversationId
+          ? { ...conv, title, updatedAt: Date.now() }
+          : conv,
+      ),
+    );
   };
 
   const deleteConversation = (conversationId: string) => {
-    setConversations(prev => {
-      const filtered = prev.filter(c => c.id !== conversationId);
-      
+    setConversations((prev) => {
+      const filtered = prev.filter((c) => c.id !== conversationId);
+
       // If we deleted the current conversation, switch to the most recent remaining one
       if (currentConversationId === conversationId) {
         if (filtered.length > 0) {
-          const mostRecent = filtered.reduce((prev, curr) => 
-            curr.updatedAt > prev.updatedAt ? curr : prev
+          const mostRecent = filtered.reduce((prev, curr) =>
+            curr.updatedAt > prev.updatedAt ? curr : prev,
           );
           setCurrentConversationId(mostRecent.id);
         } else {
           setCurrentConversationId(null);
         }
       }
-      
+
       return filtered;
     });
   };
@@ -172,18 +198,20 @@ export function ChatHistoryProvider({ children }: { children: preact.ComponentCh
   };
 
   return (
-    <ChatHistoryContext.Provider value={{
-      conversations,
-      currentConversationId,
-      currentConversation,
-      createNewConversation,
-      switchToConversation,
-      addMessageToConversation,
-      updateMessageInConversation,
-      updateConversationTitle,
-      deleteConversation,
-      clearAllConversations,
-    }}>
+    <ChatHistoryContext.Provider
+      value={{
+        conversations,
+        currentConversationId,
+        currentConversation,
+        createNewConversation,
+        switchToConversation,
+        addMessageToConversation,
+        updateMessageInConversation,
+        updateConversationTitle,
+        deleteConversation,
+        clearAllConversations,
+      }}
+    >
       {children}
     </ChatHistoryContext.Provider>
   );

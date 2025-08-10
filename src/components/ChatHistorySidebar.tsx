@@ -10,7 +10,11 @@ interface ChatHistorySidebarProps {
   onClose: () => void;
 }
 
-export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHistorySidebarProps) {
+export function ChatHistorySidebar({
+  selectedModel,
+  isOpen,
+  onClose,
+}: ChatHistorySidebarProps) {
   const {
     conversations,
     currentConversationId,
@@ -20,8 +24,10 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
     updateConversationTitle,
     clearAllConversations,
   } = useChatHistory();
-  
-  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+
+  const [editingConversationId, setEditingConversationId] = useState<
+    string | null
+  >(null);
   const [editTitle, setEditTitle] = useState("");
 
   const handleNewConversation = () => {
@@ -55,13 +61,20 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     } else if (diffInHours < 24 * 7) {
-      return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleDateString([], {
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString([], { month: "short", day: "numeric" });
     }
   };
 
@@ -70,8 +83,11 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
-      
+      <div
+        className="absolute inset-0 bg-black bg-opacity-50"
+        onClick={onClose}
+      />
+
       {/* Sidebar */}
       <div className="relative bg-background border-r border-border w-80 h-full overflow-hidden flex flex-col">
         {/* Header */}
@@ -111,7 +127,9 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
             <div className="p-4 text-center text-muted-foreground">
               <MessageCircle size={48} className="mx-auto mb-2 opacity-50" />
               <p>No conversations yet</p>
-              <p className="text-sm mt-1">Start a new conversation to see it here</p>
+              <p className="text-sm mt-1">
+                Start a new conversation to see it here
+              </p>
             </div>
           ) : (
             <div className="p-2">
@@ -134,11 +152,13 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
                         <div className="flex items-center gap-1">
                           <Input
                             value={editTitle}
-                            onChange={(e) => setEditTitle(e.currentTarget.value)}
+                            onChange={(e) =>
+                              setEditTitle(e.currentTarget.value)
+                            }
                             className="text-sm h-6 px-1"
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveTitle();
-                              if (e.key === 'Escape') handleCancelEdit();
+                              if (e.key === "Enter") handleSaveTitle();
+                              if (e.key === "Escape") handleCancelEdit();
                             }}
                             autoFocus
                           />
@@ -166,10 +186,14 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
                           </Button>
                         </div>
                       ) : (
-                        <h3 className="font-medium text-sm truncate">{conversation.title}</h3>
+                        <h3 className="font-medium text-sm truncate">
+                          {conversation.title}
+                        </h3>
                       )}
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">{conversation.model}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {conversation.model}
+                        </span>
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-xs text-muted-foreground">
                           {conversation.messages.length} messages
@@ -181,7 +205,11 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
                       </div>
                       {conversation.messages.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-1 truncate">
-                          {conversation.messages[conversation.messages.length - 1]?.content}
+                          {
+                            conversation.messages[
+                              conversation.messages.length - 1
+                            ]?.content
+                          }
                         </p>
                       )}
                     </div>
@@ -203,9 +231,7 @@ export function ChatHistorySidebar({ selectedModel, isOpen, onClose }: ChatHisto
                         className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm("Delete this conversation?")) {
-                            deleteConversation(conversation.id);
-                          }
+                          deleteConversation(conversation.id);
                         }}
                       >
                         <Trash2 size={12} />
