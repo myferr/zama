@@ -14,7 +14,7 @@
 
 </div>
 
-Zama is a cross-platform lightweight desktop application to manage and chat with local large language models using Ollama, it's built with Tauri and Preact ~~i should've used React~~.
+Zama is a cross-platform lightweight desktop application to manage and chat with local large language models using Ollama, it's built with Tauri and Preact.
 
 The only feature that requires you to be connected to the internet is **model lookup** and **model installation**.
 
