@@ -1,14 +1,23 @@
 #!/bin/bash
 
+# ANSI color codes
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print with zama prefix
+zama_echo() {
+  echo -e "${BLUE}[zama]${NC} $1"
+}
+
 REPO="myferr/zama"
 LATEST_RELEASE=$(curl -sL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 
 if [ -z "$LATEST_RELEASE" ]; then
-  echo "Could not fetch the latest release tag."
+  zama_echo "Could not fetch the latest release tag."
   exit 1
 fi
 
-echo "Latest release: $LATEST_RELEASE"
+zama_echo "Latest release: $LATEST_RELEASE"
 
 OS=$(uname -s)
 ARCH=$(uname -m)
@@ -27,7 +36,7 @@ Linux*)
     FILENAME="zama_${LATEST_RELEASE#v}_arm64.AppImage" # Placeholder, adjust if different
     ;;
   *)
-    echo "Unsupported architecture for Linux: $ARCH"
+    zama_echo "Unsupported architecture for Linux: $ARCH"
     exit 1
     ;;
   esac
@@ -41,7 +50,7 @@ Darwin*)
     FILENAME="zama_${LATEST_RELEASE#v}_aarch64.dmg"
     ;;
   *)
-    echo "Unsupported architecture for macOS: $ARCH"
+    zama_echo "Unsupported architecture for macOS: $ARCH"
     exit 1
     ;;
   esac
@@ -52,32 +61,32 @@ CYGWIN* | MINGW32* | MSYS* | MINGW*)
     FILENAME="zama_${LATEST_RELEASE#v}_x64-setup.exe"
     ;;
   *)
-    echo "Unsupported architecture for Windows: $ARCH"
+    zama_echo "Unsupported architecture for Windows: $ARCH"
     exit 1
     ;;
   esac
   ;;
 *)
-  echo "Unsupported operating system: $OS"
+  zama_echo "Unsupported operating system: $OS"
   exit 1
   ;;
 esac
 
 if [ -z "$FILENAME" ]; then
-  echo "Could not determine filename for your system."
+  zama_echo "Could not determine filename for your system."
   exit 1
 fi
 
 DOWNLOAD_URL="$DOWNLOAD_URL_BASE/$FILENAME"
-echo "Downloading $FILENAME from $DOWNLOAD_URL"
+zama_echo "Downloading $FILENAME from $DOWNLOAD_URL"
 
 curl -LJO "$DOWNLOAD_URL"
 
 if [ $? -eq 0 ]; then
-  echo "Download complete: $FILENAME"
+  zama_echo "Download complete: $FILENAME"
   open $FILENAME
 else
-  echo "Download failed."
+  zama_echo "Download failed."
   exit 1
 fi
 

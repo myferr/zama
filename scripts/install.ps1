@@ -1,20 +1,29 @@
 $repo = "myferr/zama"
 $latestReleaseUrl = "https://api.github.com/repos/$repo/releases/latest"
 
+function Write-Zama {
+    param(
+        [string]$Message,
+        [ConsoleColor]$Color = "White"
+    )
+    Write-Host "[zama] " -ForegroundColor Blue -NoNewline
+    Write-Host $Message -ForegroundColor $Color
+}
+
 try {
     $releaseInfo = Invoke-RestMethod -Uri $latestReleaseUrl
     $latestTag = $releaseInfo.tag_name
 } catch {
-    Write-Error "Could not fetch the latest release tag: $($_.Exception.Message)"
+    Write-Zama "Could not fetch the latest release tag: $($_.Exception.Message)" Red
     exit 1
 }
 
 if ([string]::IsNullOrEmpty($latestTag)) {
-    Write-Error "Could not fetch the latest release tag."
+    Write-Zama "Could not fetch the latest release tag." Red
     exit 1
 }
 
-Write-Host "Latest release: $latestTag"
+Write-Zama "Latest release: $latestTag" Green
 
 $osPlatform = ""
 if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
@@ -24,7 +33,7 @@ if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Ru
 } elseif ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Linux)) {
     $osPlatform = "Linux"
 } else {
-    Write-Error "Unsupported operating system."
+    Write-Zama "Unsupported operating system." Red
     exit 1
 }
 
@@ -33,7 +42,6 @@ $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToSt
 $downloadUrlBase = "https://github.com/$repo/releases/download/$latestTag"
 $filename = ""
 
-# Remove 'v' prefix from tag if present for filename consistency
 $version = $latestTag
 if ($version.StartsWith("v")) {
     $version = $version.Substring(1)
@@ -42,53 +50,47 @@ if ($version.StartsWith("v")) {
 switch ($osPlatform) {
     "Linux" {
         if ($arch -eq "X64") {
-            # Prioritize AppImage for Linux x64
             $filename = "zama_${version}_amd64.AppImage"
-            # Alternative: $filename = "zama_${version}_amd64.deb"
         } elseif ($arch -eq "Arm64") {
-            # Placeholder, adjust if different
             $filename = "zama_${version}_arm64.AppImage"
         } else {
-            Write-Error "Unsupported architecture for Linux: $arch"
+            Write-Zama "Unsupported architecture for Linux: $arch" Red
             exit 1
         }
     }
     "macOS" {
         if ($arch -eq "X64") {
-            # Placeholder, adjust if different
             $filename = "zama_${version}_x64.dmg"
         } elseif ($arch -eq "Arm64") {
             $filename = "zama_${version}_aarch64.dmg"
         } else {
-            Write-Error "Unsupported architecture for macOS: $arch"
+            Write-Zama "Unsupported architecture for macOS: $arch" Red
             exit 1
         }
     }
     "Windows" {
         if ($arch -eq "X64") {
-            # Prioritize .exe for Windows x64
             $filename = "zama_${version}_x64-setup.exe"
-            # Alternative: $filename = "zama_${version}_x64_en-US.msi"
         } else {
-            Write-Error "Unsupported architecture for Windows: $arch"
+            Write-Zama "Unsupported architecture for Windows: $arch" Red
             exit 1
         }
     }
 }
 
 if ([string]::IsNullOrEmpty($filename)) {
-    Write-Error "Could not determine filename for your system."
+    Write-Zama "Could not determine filename for your system." Red
     exit 1
 }
 
 $downloadUrl = "$downloadUrlBase/$filename"
-Write-Host "Downloading $filename from $downloadUrl"
+Write-Zama "Downloading $filename from $downloadUrl" Yellow
 
 try {
     Invoke-WebRequest -Uri $downloadUrl -OutFile $filename -UseBasicParsing
-    Write-Host "Download complete: $filename"
+    Write-Zama "Download complete: $filename" Green
 } catch {
-    Write-Error "Download failed: $($_.Exception.Message)"
+    Write-Zama "Download failed: $($_.Exception.Message)" Red
     exit 1
 }
 
