@@ -10,7 +10,6 @@ export default function ModelsPage() {
   const [models, setModels] = useState<ListModelsResponse["models"]>([]);
   const [loading, setLoading] = useState(false);
   const { showToast, ToastComponent } = useToast();
-  
 
   const fetchModels = async () => {
     setLoading(true);
@@ -60,7 +59,8 @@ export default function ModelsPage() {
               <div>
                 <div className="font-medium">{model.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  Size: {Math.round(model.size / (1000 * 1000 * 1000))} GB | Last Modified: {model.modified_at}
+                  Size: {Math.round(model.size / (1000 * 1000 * 1000))} GB |
+                  Last Modified: {model.modified_at}
                 </div>
               </div>
               <Button
