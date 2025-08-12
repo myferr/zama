@@ -31,6 +31,7 @@ The only feature that requires you to be connected to the internet is **model lo
 * Dark/light mode support
 * Chat history
 * Markdown support
+* Huggingface and Ollama model support. (GGUF format, only text-generation is supported for now.)
 
 and more to come soon!
 
