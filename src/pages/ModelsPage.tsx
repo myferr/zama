@@ -40,7 +40,19 @@ export default function ModelsPage() {
   return (
     <div className="p-4 bg-background text-foreground">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold">Your Models</h2>
+        <h2 className="text-xl font-semibold">
+          Your Models
+          {models.length > 0 && (
+            <span className="text-sm font-normal text-muted-foreground ml-2">
+              (
+              {Math.round(
+                models.reduce((total, model) => total + model.size, 0) /
+                  (1000 * 1000 * 1000),
+              )}{" "}
+              GB total)
+            </span>
+          )}
+        </h2>
         <Button variant="outline" onClick={fetchModels} disabled={loading}>
           <RefreshCcw className="w-4 h-4 mr-2" />
           Refresh
