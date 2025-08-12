@@ -4,7 +4,7 @@ use tokio::time::{timeout, Duration};
 
 mod updater;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/ 
+// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -20,7 +20,10 @@ async fn get_ollama_models() -> Result<String, String> {
             format!("Failed to fetch from ollamadb.dev: {}", e.to_string())
         })?;
 
-    println!("Received response from ollamadb.dev with status: {}", res.status());
+    println!(
+        "Received response from ollamadb.dev with status: {}",
+        res.status()
+    );
     if !res.status().is_success() {
         let status = res.status();
         let error_msg = format!("OllamaDB API returned non-success status: {}", status);
@@ -28,12 +31,10 @@ async fn get_ollama_models() -> Result<String, String> {
         return Err(error_msg);
     }
 
-    res.text()
-        .await
-        .map_err(|e| {
-            eprintln!("Error reading response text: {}", e);
-            format!("Failed to read response text: {}", e.to_string())
-        })
+    res.text().await.map_err(|e| {
+        eprintln!("Error reading response text: {}", e);
+        format!("Failed to read response text: {}", e.to_string())
+    })
 }
 
 // Input validation helper
@@ -52,7 +53,10 @@ fn validate_model_name(name: &str) -> Result<(), String> {
         return Err("Model name contains invalid characters".to_string());
     }
     // Ensure it looks like a valid model name (alphanumeric, hyphens, underscores, colons for tags, dots for versions)
-    if !name.chars().all(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | ':' | '.' | '/')) {
+    if !name
+        .chars()
+        .all(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | ':' | '.' | '/'))
+    {
         return Err("Model name contains invalid characters".to_string());
     }
     Ok(())

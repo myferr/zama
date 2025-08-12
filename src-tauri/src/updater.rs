@@ -1,8 +1,7 @@
-
-use std::process::Command;
+use semver::Version;
 use std::fs;
 use std::path::PathBuf;
-use semver::Version;
+use std::process::Command;
 
 // Function to get the current version from pkg/version.json
 pub fn get_current_version() -> Result<String, String> {
@@ -12,7 +11,8 @@ pub fn get_current_version() -> Result<String, String> {
         .map_err(|e| format!("Failed to read version.json: {}", e))?;
     let json: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse version.json: {}", e))?;
-    let version = json["version"].as_str()
+    let version = json["version"]
+        .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| "Version not found in version.json".to_string())?;
     println!("Successfully read current version: {}", version);
@@ -26,12 +26,14 @@ pub async fn get_latest_version() -> Result<String, String> {
     let response = reqwest::get(url)
         .await
         .map_err(|e| format!("Failed to fetch latest version: {}", e))?;
-    let content = response.text()
+    let content = response
+        .text()
         .await
         .map_err(|e| format!("Failed to read response text: {}", e))?;
     let json: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse latest version JSON: {}", e))?;
-    let version = json["version"].as_str()
+    let version = json["version"]
+        .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| "Version not found in latest version JSON".to_string())?;
     println!("Successfully fetched latest version: {}", version);
@@ -40,17 +42,23 @@ pub async fn get_latest_version() -> Result<String, String> {
 
 // Function to compare versions using semantic versioning
 pub fn is_update_available(current_version: &str, latest_version: &str) -> bool {
-    println!("Comparing current version ({}) with latest version ({})", current_version, latest_version);
-    
+    println!(
+        "Comparing current version ({}) with latest version ({})",
+        current_version, latest_version
+    );
+
     // Parse versions using semver for proper comparison
     let current = match Version::parse(current_version) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("Failed to parse current version '{}': {}", current_version, e);
+            eprintln!(
+                "Failed to parse current version '{}': {}",
+                current_version, e
+            );
             return false;
         }
     };
-    
+
     let latest = match Version::parse(latest_version) {
         Ok(v) => v,
         Err(e) => {
@@ -58,7 +66,7 @@ pub fn is_update_available(current_version: &str, latest_version: &str) -> bool 
             return false;
         }
     };
-    
+
     let update = latest > current;
     if update {
         println!("Update is available.");
@@ -74,7 +82,11 @@ pub fn uninstall_app() -> Result<(), String> {
     let app_name = "Zama.app";
     let common_app_paths = vec![
         PathBuf::from("/Applications").join(app_name),
-        PathBuf::from(format!("{}/Applications", std::env::var("HOME").unwrap_or_default())).join(app_name),
+        PathBuf::from(format!(
+            "{}/Applications",
+            std::env::var("HOME").unwrap_or_default()
+        ))
+        .join(app_name),
     ];
 
     for app_path in common_app_paths {
@@ -84,8 +96,11 @@ pub fn uninstall_app() -> Result<(), String> {
             let app_path_str = app_path.to_string_lossy();
             // Escape single quotes in the path to prevent AppleScript injection
             let escaped_path = app_path_str.replace("'", "'\"'\"'");
-            let applescript_cmd = format!("tell app \"Finder\" to move POSIX file \"{}\" to trash", escaped_path);
-            
+            let applescript_cmd = format!(
+                "tell app \"Finder\" to move POSIX file \"{}\" to trash",
+                escaped_path
+            );
+
             let output = Command::new("osascript")
                 .arg("-e")
                 .arg(applescript_cmd)
@@ -94,11 +109,14 @@ pub fn uninstall_app() -> Result<(), String> {
 
             if output.status.success() {
                 println!("Successfully moved {:?} to Trash.", app_path);
-                return Ok(())
+                return Ok(());
             } else {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 eprintln!("Failed to move {:?} to Trash. Stderr: {}", app_path, stderr);
-                return Err(format!("Failed to move {:?} to Trash: {}", app_path, stderr));
+                return Err(format!(
+                    "Failed to move {:?} to Trash: {}",
+                    app_path, stderr
+                ));
             }
         }
     }
@@ -109,7 +127,8 @@ pub fn uninstall_app() -> Result<(), String> {
 // Function to install the latest application using secure download and verification
 pub async fn install_app() -> Result<(), String> {
     println!("Attempting to install the latest version of Zama...");
-    let install_script_url = "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.sh";
+    let install_script_url =
+        "https://raw.githubusercontent.com/myferr/zama/main/scripts/install.sh";
 
     // Securely download the install script first
     println!("Downloading install script from: {}", install_script_url);
@@ -118,10 +137,14 @@ pub async fn install_app() -> Result<(), String> {
         .map_err(|e| format!("Failed to download install script: {}", e))?;
 
     if !response.status().is_success() {
-        return Err(format!("Failed to download install script: HTTP {}", response.status()));
+        return Err(format!(
+            "Failed to download install script: HTTP {}",
+            response.status()
+        ));
     }
 
-    let script_content = response.text()
+    let script_content = response
+        .text()
         .await
         .map_err(|e| format!("Failed to read install script: {}", e))?;
 
@@ -133,7 +156,7 @@ pub async fn install_app() -> Result<(), String> {
     // Write script to a temporary file
     let temp_dir = std::env::temp_dir();
     let script_path = temp_dir.join("zama_install.sh");
-    
+
     std::fs::write(&script_path, &script_content)
         .map_err(|e| format!("Failed to write install script to temp file: {}", e))?;
 
@@ -192,11 +215,10 @@ pub async fn check_and_update() {
                     } else {
                         println!("You are already running the latest version.");
                     }
-                },
+                }
                 Err(e) => eprintln!("Failed to get latest version: {}", e),
             }
-        },
+        }
         Err(e) => eprintln!("Failed to get current version: {}", e),
     }
 }
-
