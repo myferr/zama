@@ -253,7 +253,7 @@ export default function LibraryPage() {
                 <div className="mt-2 flex flex-wrap gap-1">
                   {model.provider === "huggingface" &&
                     Array.isArray(model.tags) &&
-                    model.tags.map((tag: string, index: number) => (
+                    model.tags.map((tag: string) => (
                       <span
                         key={tag}
                         className="bg-gray-900 text-gray-500 text-xs px-2 py-1 rounded-full"
