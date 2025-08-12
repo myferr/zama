@@ -60,6 +60,9 @@ npm install # or yarn, pnpm, bun
 npm run tauri build # or yarn, pnpm, bun
 ```
 
+### Wiki
+For installation guides, the contribution guide, and more check out the [Wiki page](https://github.com/myferr/zama/wiki)
+
 ### License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
