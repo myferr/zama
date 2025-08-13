@@ -3,4 +3,4 @@ if [ "$SKIP_PRECOMMIT" = "true" ]; then
   echo "Skipping pre-commit hook"
   exit 0
 fi
-npm test
+bun run test
