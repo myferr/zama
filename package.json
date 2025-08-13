@@ -9,7 +9,7 @@
     "tauri": "tauri",
     "test": "bun scripts/test.js",
     "prepare": "husky",
-    "commit:minor": "git commit --no-verify"
+    "commit:minor": "SKIP_PRECOMMIT=true git commit"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.5",
