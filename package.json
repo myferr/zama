@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "bun scripts/test.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "commit:minor": "git commit --no-verify"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.5",
