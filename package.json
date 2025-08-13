@@ -7,9 +7,11 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "bun scripts/test.js",
+    "test:build": "bun tests/build.test.js",
+    "test:ci": "bun tests/ci.test.js",
     "prepare": "husky",
-    "commit:minor": "SKIP_PRECOMMIT=true git commit"
+    "commit:minor": "SKIP_PRECOMMIT=true git commit",
+    "commit:ci": "CI_TEST=true git commit"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.2.5",

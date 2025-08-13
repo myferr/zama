@@ -3,4 +3,11 @@ if [ "$SKIP_PRECOMMIT" = "true" ]; then
   echo "Skipping pre-commit hook"
   exit 0
 fi
-bun run test
+
+if [ "$CI_TEST" = "true" ]; then
+  echo "Testing CI"
+  bun run test:ci
+fi
+
+
+bun run test:build
