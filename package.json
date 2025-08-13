@@ -14,6 +14,8 @@
     "commit:ci": "CI_TEST=true git commit"
   },
   "dependencies": {
+    "@preact/signals": "^2.2.1",
+    "@preact/signals-core": "^1.11.0",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slider": "^1.3.5",
     "@radix-ui/react-slot": "^1.2.3",
@@ -27,6 +29,7 @@
     "preact": "^10.25.1",
     "react-icons": "^5.5.0",
     "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^15.6.1",
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "systeminformation": "^5.27.7",
@@ -39,6 +42,7 @@
     "@preact/preset-vite": "^2.9.3",
     "@tauri-apps/cli": "^2",
     "@types/node": "^24.2.0",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "chalk": "^5.5.0",
     "husky": "^9.1.7",
     "tw-animate-css": "^1.3.6",

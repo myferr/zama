@@ -1,4 +1,4 @@
-// pages/ChatPage.tsx
+// src/pages/ChatPage.tsx
 import { useEffect, useState, useRef } from "preact/hooks";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,36 @@ import { SendHorizonal, Copy, Check, MessageCircle, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { RxGithubLogo } from "react-icons/rx";
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import { docco } from "react-syntax-highlighter/dist/esm/styles/hljs";
+
+// Register languages for syntax highlighting
+import javascript from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
+import python from "react-syntax-highlighter/dist/esm/languages/hljs/python";
+import typescript from "react-syntax-highlighter/dist/esm/languages/hljs/typescript";
+import bash from "react-syntax-highlighter/dist/esm/languages/hljs/bash";
+import json from "react-syntax-highlighter/dist/esm/languages/hljs/json";
+import rust from "react-syntax-highlighter/dist/esm/languages/hljs/rust";
+import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
+
+SyntaxHighlighter.registerLanguage("javascript", javascript);
+SyntaxHighlighter.registerLanguage("python", python);
+SyntaxHighlighter.registerLanguage("typescript", typescript);
+SyntaxHighlighter.registerLanguage("bash", bash);
+SyntaxHighlighter.registerLanguage("json", json);
+SyntaxHighlighter.registerLanguage("rust", rust);
+SyntaxHighlighter.registerLanguage("markdown", markdown);
+
+// Minimal helper to accept either a plain value or a signal-like object with `.value`
+type MaybeSignal<T> = T | { value: T };
+function unwrap<T>(v: MaybeSignal<T> | null | undefined): T | null {
+  if (v == null) return null;
+  return typeof v === "object" && "value" in v ? (v as any).value : (v as any);
+}
 
 interface ChatPageProps {
-  selectedModel: string | null;
+  // allow string, null, or a signal-like { value: string | undefined }
+  selectedModel: MaybeSignal<string | undefined> | string | null;
   contextLength: number | null;
   temperature: number;
   systemPrompt: string;
@@ -26,10 +53,12 @@ export default function ChatPage({
 }: ChatPageProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(
+    null,
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const { showToast, ToastComponent } = useToast();
-  
+
   const {
     currentConversation,
     currentConversationId,
@@ -37,6 +66,9 @@ export default function ChatPage({
     addMessageToConversation,
     updateMessageInConversation,
   } = useChatHistory();
+
+  // Always work with a plain string here
+  const modelName = unwrap<string | undefined>(selectedModel) ?? null;
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -47,7 +79,7 @@ export default function ChatPage({
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
-    if (!selectedModel) {
+    if (!modelName) {
       showToast("Please select a model first.", "error");
       return;
     }
@@ -55,15 +87,18 @@ export default function ChatPage({
     // Create new conversation if none exists or if model changed
     let conversationId = currentConversationId;
     let conversationToUse = currentConversation;
-    if (!conversationId || (currentConversation && currentConversation.model !== selectedModel)) {
-      conversationId = createNewConversation(selectedModel);
+    if (
+      !conversationId ||
+      (currentConversation && currentConversation.model !== modelName)
+    ) {
+      conversationId = createNewConversation(modelName);
       conversationToUse = null; // New conversation, no previous messages
     }
 
-    const userMessage: Message = { 
-      role: "user", 
+    const userMessage: Message = {
+      role: "user",
       content: input.trim(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     const userInput = input.trim();
@@ -71,30 +106,33 @@ export default function ChatPage({
     setLoading(true);
 
     // Calculate the position where the assistant message will be added
-    const currentMessageCount = (conversationToUse?.messages.length || 0);
+    const currentMessageCount = conversationToUse?.messages.length || 0;
     const assistantMessageIndex = currentMessageCount + 1;
 
     // Add user message to conversation
     addMessageToConversation(conversationId, userMessage);
 
     // Build message history for API call - include ALL previous messages for context
-    const messagesToSend = [];
+    const messagesToSend: Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }> = [];
     if (systemPrompt) {
       messagesToSend.push({ role: "system", content: systemPrompt });
     }
-    
+
     // Add all messages from current conversation for full context (before adding the new user message)
     if (conversationToUse) {
       for (const msg of conversationToUse.messages) {
         if (msg.role === "user" || msg.role === "assistant") {
           messagesToSend.push({
             role: msg.role,
-            content: msg.content
+            content: msg.content,
           });
         }
       }
     }
-    
+
     // Add the new user message to the API call
     messagesToSend.push({ role: "user", content: userInput });
 
@@ -102,15 +140,15 @@ export default function ChatPage({
     const assistantMessage: Message = {
       role: "assistant",
       content: "",
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
     addMessageToConversation(conversationId, assistantMessage);
 
     try {
       let assistantResponse = "";
-      
+
       for await (const chunk of OllamaClient.chatStream({
-        model: selectedModel,
+        model: modelName,
         messages: messagesToSend,
         options: {
           num_ctx: contextLength || undefined,
@@ -118,17 +156,24 @@ export default function ChatPage({
         },
       } as ChatRequest)) {
         assistantResponse += chunk.message.content;
-        
-        // Update the assistant message in the conversation
-        updateMessageInConversation(conversationId, assistantMessageIndex, assistantResponse);
-      }
 
+        // Update the assistant message in the conversation
+        updateMessageInConversation(
+          conversationId,
+          assistantMessageIndex,
+          assistantResponse,
+        );
+      }
     } catch (error) {
       console.error("Error during chat:", error);
       showToast("Failed to send message. Please try again.", "error");
-      
+
       // Update assistant message with error
-      updateMessageInConversation(conversationId, assistantMessageIndex, "Sorry, I encountered an error. Please try again.");
+      updateMessageInConversation(
+        conversationId,
+        assistantMessageIndex,
+        "Sorry, I encountered an error. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -139,7 +184,7 @@ export default function ChatPage({
       await navigator.clipboard.writeText(content);
       setCopiedMessageIndex(index);
       setTimeout(() => setCopiedMessageIndex(null), 2000);
-    } catch (err) {
+    } catch {
       showToast("Failed to copy message", "error");
     }
   };
@@ -152,11 +197,11 @@ export default function ChatPage({
   };
 
   const handleNewConversation = () => {
-    if (!selectedModel) {
+    if (!modelName) {
       showToast("Please select a model first.", "error");
       return;
     }
-    createNewConversation(selectedModel);
+    createNewConversation(modelName);
   };
 
   const messages = currentConversation?.messages || [];
@@ -180,7 +225,7 @@ export default function ChatPage({
             variant="outline"
             size="sm"
             onClick={handleNewConversation}
-            disabled={!selectedModel}
+            disabled={!modelName}
           >
             <Plus className="w-4 h-4 mr-1" />
             New Chat
@@ -198,8 +243,8 @@ export default function ChatPage({
             <MessageCircle size={48} className="mb-4 opacity-50" />
             <h2 className="text-xl font-semibold mb-2">Start a conversation</h2>
             <p className="mb-4">
-              {selectedModel
-                ? `Chat with ${selectedModel}. Your conversation will continue with full context.`
+              {modelName
+                ? `Chat with ${modelName}. Your conversation will continue with full context.`
                 : "Select a model to start chatting"}
             </p>
             <div className="flex items-center gap-2 text-sm">
@@ -225,34 +270,97 @@ export default function ChatPage({
               >
                 {message.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground prose-blockquote:text-foreground prose-code:text-foreground prose-pre:text-foreground">
-                    <ReactMarkdown 
+                    <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        h1: ({children}) => <h1 className="text-xl font-bold mb-2 mt-4">{children}</h1>,
-                        h2: ({children}) => <h2 className="text-lg font-bold mb-2 mt-3">{children}</h2>,
-                        h3: ({children}) => <h3 className="text-base font-bold mb-1 mt-2">{children}</h3>,
-                        h4: ({children}) => <h4 className="text-sm font-bold mb-1 mt-2">{children}</h4>,
-                        h5: ({children}) => <h5 className="text-sm font-semibold mb-1 mt-2">{children}</h5>,
-                        h6: ({children}) => <h6 className="text-xs font-semibold mb-1 mt-2">{children}</h6>,
-                        p: ({children}) => <p className="mb-2">{children}</p>,
-                        ul: ({children}) => <ul className="list-disc list-inside mb-2">{children}</ul>,
-                        ol: ({children}) => <ol className="list-decimal list-inside mb-2">{children}</ol>,
-                        li: ({children}) => <li className="mb-1">{children}</li>,
-                        strong: ({children}) => <strong className="font-bold">{children}</strong>,
-                        em: ({children}) => <em className="italic">{children}</em>,
-                        blockquote: ({children}) => <blockquote className="border-l-4 border-gray-300 pl-4 italic my-2">{children}</blockquote>,
-                        code: ({children, className}) => {
-                          const isInline = !className;
-                          return isInline ? (
-                            <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">{children}</code>
+                        h1: ({ children }) => (
+                          <h1 className="text-xl font-bold mb-2 mt-4">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="text-lg font-bold mb-2 mt-3">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="text-base font-bold mb-1 mt-2">
+                            {children}
+                          </h3>
+                        ),
+                        h4: ({ children }) => (
+                          <h4 className="text-sm font-bold mb-1 mt-2">
+                            {children}
+                          </h4>
+                        ),
+                        h5: ({ children }) => (
+                          <h5 className="text-sm font-semibold mb-1 mt-2">
+                            {children}
+                          </h5>
+                        ),
+                        h6: ({ children }) => (
+                          <h6 className="text-xs font-semibold mb-1 mt-2">
+                            {children}
+                          </h6>
+                        ),
+                        p: ({ children }) => <p className="mb-2">{children}</p>,
+                        ul: ({ children }) => (
+                          <ul className="list-disc list-inside mb-2">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal list-inside mb-2">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="mb-1">{children}</li>
+                        ),
+                        strong: ({ children }) => (
+                          <strong className="font-bold">{children}</strong>
+                        ),
+                        em: ({ children }) => (
+                          <em className="italic">{children}</em>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-4 border-gray-300 pl-4 italic my-2">
+                            {children}
+                          </blockquote>
+                        ),
+                        code: ({ className, children, ...props }) => {
+                          // unwrap potential signal-like className
+                          const cls =
+                            unwrap<string | undefined>(className as any) ?? "";
+                          const match = /language-(\w+)/.exec(cls);
+
+                          return match ? (
+                            <SyntaxHighlighter
+                              {...props}
+                              style={docco}
+                              language={match[1]}
+                              PreTag="div"
+                            >
+                              {String(children as string).replace(/\n$/, "")}
+                            </SyntaxHighlighter>
                           ) : (
-                            <code className={className}>{children}</code>
+                            <code
+                              {...props}
+                              className={`${cls} bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono`}
+                            >
+                              {children}
+                            </code>
                           );
                         },
-                        pre: ({children}) => <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md overflow-x-auto my-2">{children}</pre>,
+                        pre: ({ children }) => (
+                          <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-md overflow-x-auto my-2">
+                            {children}
+                          </pre>
+                        ),
                       }}
                     >
-                      {message.content || (loading && index === messages.length - 1 ? "..." : "")}
+                      {message.content ||
+                        (loading && index === messages.length - 1 ? "..." : "")}
                     </ReactMarkdown>
                   </div>
                 ) : (
@@ -283,16 +391,16 @@ export default function ChatPage({
           onChange={(e) => setInput(e.currentTarget.value)}
           onKeyPress={handleKeyPress}
           placeholder={
-            selectedModel
+            modelName
               ? "Type your message..."
               : "Select a model to start chatting"
           }
-          disabled={loading || !selectedModel}
+          disabled={loading || !modelName}
           className="flex-1"
         />
         <Button
           onClick={handleSubmit}
-          disabled={loading || !input.trim() || !selectedModel}
+          disabled={loading || !input.trim() || !modelName}
         >
           <SendHorizonal className="w-4 h-4" />
         </Button>
