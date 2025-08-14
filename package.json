@@ -11,7 +11,8 @@
     "test:ci": "bun tests/ci.test.js",
     "prepare": "husky",
     "commit:minor": "SKIP_PRECOMMIT=true git commit",
-    "commit:ci": "CI_TEST=true git commit"
+    "commit:ci": "CI_TEST=true git commit",
+    "loc": "rm LOC && tokei > LOC && echo \"Updated LOC. \""
   },
   "dependencies": {
     "@preact/signals": "^2.2.1",
