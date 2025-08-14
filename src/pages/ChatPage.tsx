@@ -12,6 +12,7 @@ import remarkGfm from "remark-gfm";
 import { RxGithubLogo } from "react-icons/rx";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { docco } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import Thinking from "@/components/Thinking";
 
 // Register languages for syntax highlighting
 import javascript from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
@@ -30,7 +31,7 @@ SyntaxHighlighter.registerLanguage("json", json);
 SyntaxHighlighter.registerLanguage("rust", rust);
 SyntaxHighlighter.registerLanguage("markdown", markdown);
 
-// Minimal helper to accept either a plain value or a signal-like object with `.value`
+// Minimal helper to accept either a plain value or a signal-like object with ".value"
 type MaybeSignal<T> = T | { value: T };
 function unwrap<T>(v: MaybeSignal<T> | null | undefined): T | null {
   if (v == null) return null;
@@ -56,6 +57,8 @@ export default function ChatPage({
   const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(
     null,
   );
+  const [thinkingContent, setThinkingContent] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { showToast, ToastComponent } = useToast();
 
@@ -75,7 +78,7 @@ export default function ChatPage({
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [currentConversation?.messages]);
+  }, [currentConversation?.messages, thinkingContent]);
 
   const handleSubmit = async () => {
     if (!input.trim()) return;
@@ -104,6 +107,8 @@ export default function ChatPage({
     const userInput = input.trim();
     setInput("");
     setLoading(true);
+    setIsThinking(false);
+    setThinkingContent("");
 
     // Calculate the position where the assistant message will be added
     const currentMessageCount = conversationToUse?.messages.length || 0;
@@ -146,6 +151,8 @@ export default function ChatPage({
 
     try {
       let assistantResponse = "";
+      let thinkingBuffer = "";
+      let inThinkTag = false;
 
       for await (const chunk of OllamaClient.chatStream({
         model: modelName,
@@ -155,7 +162,32 @@ export default function ChatPage({
           temperature: temperature,
         },
       } as ChatRequest)) {
-        assistantResponse += chunk.message.content;
+        let content = chunk.message.content;
+
+        if (inThinkTag) {
+          if (content.includes("</think>")) {
+            const parts = content.split("</think>");
+            thinkingBuffer += parts[0];
+            setThinkingContent(thinkingBuffer);
+            inThinkTag = false;
+            content = parts[1] || "";
+          } else {
+            thinkingBuffer += content;
+            setThinkingContent(thinkingBuffer);
+            continue;
+          }
+        }
+
+        if (content.includes("<think>")) {
+          const parts = content.split("<think>");
+          assistantResponse += parts[0];
+          inThinkTag = true;
+          setIsThinking(true);
+          thinkingBuffer = parts[1] || "";
+          setThinkingContent(thinkingBuffer);
+        } else {
+          assistantResponse += content;
+        }
 
         // Update the assistant message in the conversation
         updateMessageInConversation(
@@ -176,6 +208,7 @@ export default function ChatPage({
       );
     } finally {
       setLoading(false);
+      setIsThinking(false);
     }
   };
 
@@ -257,19 +290,18 @@ export default function ChatPage({
           messages.map((message, index) => (
             <div
               key={`${message.timestamp}-${index}`}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 relative group ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground ml-12"
-                    : "bg-muted text-muted-foreground mr-12"
-                }`}
+                className={`max-w-[80%] rounded-lg px-4 py-2 relative group ${message.role === "user"
+                  ? "bg-primary text-primary-foreground ml-12"
+                  : "bg-muted text-muted-foreground mr-12"}`}
               >
                 {message.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground prose-blockquote:text-foreground prose-code:text-foreground prose-pre:text-foreground">
+                    {isThinking && index === messages.length - 1 && (
+                      <Thinking content={thinkingContent} />
+                    )}
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
