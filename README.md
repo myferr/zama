@@ -11,6 +11,9 @@
 ![Built with](https://img.shields.io/badge/built%20with-Tauri-blue?logo=tauri&style=for-the-badge)
 ![Frontend](https://img.shields.io/badge/frontend-Preact-673AB8?logo=preact&style=for-the-badge)
 [![Build](https://github.com/myferr/zama/actions/workflows/build.yml/badge.svg)](https://github.com/myferr/zama/actions/workflows/build.yml)
+[![Biome lint](https://github.com/myferr/zama/actions/workflows/biome.yml/badge.svg)](https://github.com/myferr/zama/actions/workflows/biome.yml)
+![Biome](https://img.shields.io/badge/codebase_uses-Biome-60A5FA?logo=biome&style=for-the-badge)
+![Husky](https://img.shields.io/badge/codebase_uses-Husky-purple?logo=github&style=for-the-badge)
 
 </div>
 
