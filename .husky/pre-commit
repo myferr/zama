@@ -1,6 +1,7 @@
 #!/bin/sh
 if [ "$SKIP_PRECOMMIT" = "true" ]; then
   echo "Skipping pre-commit hook"
+  bun run loc
   exit 0
 fi
 
@@ -9,5 +10,5 @@ if [ "$CI_TEST" = "true" ]; then
   bun run test:ci
 fi
 
-
 bun run test:build
+bun run loc
