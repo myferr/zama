@@ -123,10 +123,12 @@ export default function App() {
           const configResponse = await OllamaClient.getConfig();
           setContextLength(configResponse.num_ctx);
         } catch (configError) {
-          console.warn("Failed to get Ollama config, using default context length:", configError);
+          console.warn(
+            "Failed to get Ollama config, using default context length:",
+            configError,
+          );
           setContextLength(2048); // Set a reasonable default if config fails
         }
-
       } catch (error) {
         console.error("Failed to load initial data:", error);
       }

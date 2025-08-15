@@ -12,7 +12,11 @@
     "prepare": "husky",
     "commit:minor": "SKIP_PRECOMMIT=true git commit",
     "commit:ci": "CI_TEST=true git commit",
-    "loc": "rm LOC && tokei > LOC && echo \"Updated LOC. \""
+    "loc": "rm LOC && tokei > LOC && echo \"Updated LOC. \"",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+
+    "check": "biome format --write ."
   },
   "dependencies": {
     "@preact/signals": "^2.2.1",
@@ -38,6 +42,7 @@
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@preact/preset-vite": "^2.9.3",

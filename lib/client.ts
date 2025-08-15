@@ -14,40 +14,43 @@ const OLLAMA_BASE = "http://localhost:11434";
 
 // Input validation helpers
 function validateModelName(name: string): void {
-  if (!name || typeof name !== 'string') {
-    throw new Error('Model name must be a non-empty string');
+  if (!name || typeof name !== "string") {
+    throw new Error("Model name must be a non-empty string");
   }
   if (name.trim() !== name) {
-    throw new Error('Model name cannot have leading or trailing whitespace');
+    throw new Error("Model name cannot have leading or trailing whitespace");
   }
   if (name.length > 200) {
-    throw new Error('Model name is too long (max 200 characters)');
+    throw new Error("Model name is too long (max 200 characters)");
   }
   // Basic pattern to prevent obvious injection attempts
   if (/[<>"'&]/.test(name)) {
-    throw new Error('Model name contains invalid characters');
+    throw new Error("Model name contains invalid characters");
   }
 }
 
 function validateChatRequest(request: ChatRequest): void {
-  if (!request.model || typeof request.model !== 'string') {
-    throw new Error('Chat request must include a valid model name');
+  if (!request.model || typeof request.model !== "string") {
+    throw new Error("Chat request must include a valid model name");
   }
   validateModelName(request.model);
-  
+
   if (!Array.isArray(request.messages) || request.messages.length === 0) {
-    throw new Error('Chat request must include at least one message');
+    throw new Error("Chat request must include at least one message");
   }
-  
+
   for (const message of request.messages) {
-    if (!message.role || !['user', 'assistant', 'system'].includes(message.role)) {
-      throw new Error('Invalid message role');
+    if (
+      !message.role ||
+      !["user", "assistant", "system"].includes(message.role)
+    ) {
+      throw new Error("Invalid message role");
     }
-    if (typeof message.content !== 'string') {
-      throw new Error('Message content must be a string');
+    if (typeof message.content !== "string") {
+      throw new Error("Message content must be a string");
     }
     if (message.content.length > 50000) {
-      throw new Error('Message content is too long (max 50,000 characters)');
+      throw new Error("Message content is too long (max 50,000 characters)");
     }
   }
 }

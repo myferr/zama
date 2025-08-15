@@ -293,9 +293,11 @@ export default function ChatPage({
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 relative group ${message.role === "user"
-                  ? "bg-primary text-primary-foreground ml-12"
-                  : "bg-muted text-muted-foreground mr-12"}`}
+                className={`max-w-[80%] rounded-lg px-4 py-2 relative group ${
+                  message.role === "user"
+                    ? "bg-primary text-primary-foreground ml-12"
+                    : "bg-muted text-muted-foreground mr-12"
+                }`}
               >
                 {message.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-ul:text-foreground prose-ol:text-foreground prose-li:text-foreground prose-blockquote:text-foreground prose-code:text-foreground prose-pre:text-foreground">
