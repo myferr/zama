@@ -1,10 +1,11 @@
-// pages/ModelsPage.tsx
 import { useEffect, useState } from "preact/hooks";
-import { OllamaClient } from "$/lib/client";
+import { OllamaClientClass } from "$/lib/client";
 import type { ListModelsResponse } from "$/lib/schemas/client.schema";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { Trash2, RefreshCcw } from "lucide-react";
+
+const OllamaClient = new OllamaClientClass();
 
 export default function ModelsPage() {
   const [models, setModels] = useState<ListModelsResponse["models"]>([]);
@@ -16,8 +17,8 @@ export default function ModelsPage() {
     try {
       const res = await OllamaClient.listModels();
       setModels(res.models || []);
-    } catch (err) {
-      console.error("Failed to load models", err);
+    } catch (_err) {
+      console.error("Failed to load models", _err);
     } finally {
       setLoading(false);
     }
@@ -28,7 +29,7 @@ export default function ModelsPage() {
       await OllamaClient.deleteModel({ name });
       setModels((prev) => prev.filter((m) => m.name !== name));
       showToast(`Successfully deleted ${name}`, "success");
-    } catch (err) {
+    } catch (_err) {
       showToast(`Failed to delete ${name}`, "error");
     }
   };

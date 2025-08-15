@@ -1,6 +1,12 @@
 #!/bin/sh
 if [ "$SKIP_PRECOMMIT" = "true" ]; then
-  echo "Skipping pre-commit hook"
+  echo "Skipping pre-commit build test"
+  cd src-tauri
+  cargo clean
+  cd ..
+
+  bun run format
+  bun run lint
   bun run loc
   exit 0
 fi
@@ -11,4 +17,13 @@ if [ "$CI_TEST" = "true" ]; then
 fi
 
 bun run test:build
+
+rm -rf dist
+
+cd src-tauri
+cargo clean
+cd ..
+bun run format
+bun run lint
+
 bun run loc

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useChatHistory, type Message } from "@/contexts/ChatHistoryContext";
-import { OllamaClient } from "$/lib/client";
+import { OllamaClientClass } from "$/lib/client";
 import type { ChatRequest } from "$/lib/schemas/client.schema";
 import { SendHorizonal, Copy, Check, MessageCircle, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -23,6 +23,8 @@ import json from "react-syntax-highlighter/dist/esm/languages/hljs/json";
 import rust from "react-syntax-highlighter/dist/esm/languages/hljs/rust";
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
 
+const OllamaClient = new OllamaClientClass();
+
 SyntaxHighlighter.registerLanguage("javascript", javascript);
 SyntaxHighlighter.registerLanguage("python", python);
 SyntaxHighlighter.registerLanguage("typescript", typescript);
@@ -33,9 +35,16 @@ SyntaxHighlighter.registerLanguage("markdown", markdown);
 
 // Minimal helper to accept either a plain value or a signal-like object with ".value"
 type MaybeSignal<T> = T | { value: T };
+function isSignal<T>(v: MaybeSignal<T>): v is { value: T } {
+  return typeof v === "object" && v !== null && "value" in v;
+}
+
 function unwrap<T>(v: MaybeSignal<T> | null | undefined): T | null {
   if (v == null) return null;
-  return typeof v === "object" && "value" in v ? (v as any).value : (v as any);
+  if (isSignal(v)) {
+    return v.value;
+  }
+  return v;
 }
 
 interface ChatPageProps {
@@ -281,7 +290,11 @@ export default function ChatPage({
                 : "Select a model to start chatting"}
             </p>
             <div className="flex items-center gap-2 text-sm">
-              <a href="https://github.com/myferr/zama" target="_blank">
+              <a
+                href="https://github.com/myferr/zama"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <RxGithubLogo size={26} />
               </a>
             </div>
@@ -365,7 +378,7 @@ export default function ChatPage({
                         code: ({ className, children, ...props }) => {
                           // unwrap potential signal-like className
                           const cls =
-                            unwrap<string | undefined>(className as any) ?? "";
+                            unwrap<string | undefined>(className) ?? "";
                           const match = /language-(\w+)/.exec(cls);
 
                           return match ? (

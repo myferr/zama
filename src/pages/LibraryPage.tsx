@@ -1,7 +1,7 @@
 /** @jsxImportSource preact */
 import { useEffect, useState } from "preact/hooks";
-import { OllamaDBModel } from "$/lib/schemas/ollamadb.schema";
-import { HfModel } from "$/lib/schemas/hf.schema";
+import type { OllamaDBModel } from "$/lib/schemas/ollamadb.schema";
+import type { HfModel } from "$/lib/schemas/hf.schema";
 import { invoke } from "@tauri-apps/api/core";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
@@ -18,22 +18,28 @@ import { SiOllama } from "react-icons/si";
 import { BiBadgeCheck } from "react-icons/bi";
 import { RxDownload } from "react-icons/rx";
 import { Check } from "lucide-react";
-import { OllamaClient } from "$/lib/client";
-import { HfClient } from "$/lib/hf-client";
+import { OllamaClientClass } from "$/lib/client";
+import { HfClientClass } from "$/lib/hf-client";
 import { SiHuggingface } from "react-icons/si";
+
+const OllamaClient = new OllamaClientClass();
+
+const HfClient = new HfClientClass();
 
 type UnifiedModel = {
   id: string;
   name: string;
   description?: string;
   pulls?: number;
-  tags?: string[] | any;
+  tags?: string[];
   labels?: string[];
   url: string;
   provider: "ollama" | "huggingface";
   isOfficial?: boolean;
   author?: string;
   lastModified?: string;
+  downloads?: number;
+  likes?: number;
 };
 
 export default function LibraryPage() {
@@ -84,6 +90,8 @@ export default function LibraryPage() {
             provider: "huggingface",
             author: model.author,
             lastModified: model.lastModified,
+            downloads: model.downloads,
+            likes: model.likes,
           }));
         }
 
@@ -154,7 +162,9 @@ export default function LibraryPage() {
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Search Models</h1>
         <Select
-          onValueChange={(value) => setProvider(value as any)}
+          onValueChange={(value) =>
+            setProvider(value as "ollama" | "huggingface")
+          }
           value={provider}
         >
           <SelectTrigger className="w-[180px]">
@@ -188,13 +198,13 @@ export default function LibraryPage() {
                 a.provider === "huggingface" &&
                 b.provider === "huggingface"
               ) {
-                const aDownloads = (a as any).downloads || 0;
-                const bDownloads = (b as any).downloads || 0;
+                const aDownloads = a.downloads || 0;
+                const bDownloads = b.downloads || 0;
                 if (bDownloads !== aDownloads) {
                   return bDownloads - aDownloads;
                 }
-                const aLikes = (a as any).likes || 0;
-                const bLikes = (b as any).likes || 0;
+                const aLikes = a.likes || 0;
+                const bLikes = b.likes || 0;
                 return bLikes - aLikes;
               }
               return 0;
@@ -217,6 +227,7 @@ export default function LibraryPage() {
                     </a>
                     {model.isOfficial && <BiBadgeCheck />}
                     <button
+                      type="button"
                       className={`${
                         pullingModel === model.name ||
                         installedModels.has(getBaseModelName(model.name))

@@ -10,9 +10,16 @@ export default function Thinking({ content }: ThinkingProps) {
 
   return (
     <div className="my-2 p-2 border rounded-lg bg-gray-100 dark:bg-gray-800">
-      <div
+      <button
+        type="button"
+        tabIndex={0}
         className="flex items-center cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            setIsOpen(!isOpen);
+          }
+        }}
       >
         {isOpen ? (
           <ChevronDown className="w-4 h-4 mr-2" />
@@ -20,7 +27,7 @@ export default function Thinking({ content }: ThinkingProps) {
           <ChevronRight className="w-4 h-4 mr-2" />
         )}
         <span className="font-semibold animate-pulse">Thinking...</span>
-      </div>
+      </button>
       {isOpen && (
         <div className="mt-2 p-2 border-t">
           <pre className="whitespace-pre-wrap text-sm">{content}</pre>

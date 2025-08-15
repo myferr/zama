@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 import tailwindcss from "@tailwindcss/vite";
-import path from "path";
+import path from "node:path";
 
 const host = process.env.TAURI_DEV_HOST;
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
-import * as preact from "preact";
+import type * as preact from "preact";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,7 @@ import ModelsPage from "@/pages/ModelsPage";
 import HistoryPage from "@/pages/HistoryPage";
 import { ChatHistoryProvider } from "@/contexts/ChatHistoryContext";
 
-import { OllamaClient } from "../lib/client";
+import { OllamaClientClass } from "$/lib/client";
 import type { OllamaModel } from "$/lib/schemas/client.schema";
 import LibraryPage from "@/pages/LibraryPage";
 
@@ -23,6 +23,8 @@ import { VscLibrary } from "react-icons/vsc";
 import { SiRobotframework } from "react-icons/si";
 import { MdChatBubbleOutline } from "react-icons/md";
 import { History, Sun, Moon } from "lucide-react";
+
+const OllamaClient = new OllamaClientClass();
 
 interface PageConfig {
   id: string;
@@ -206,13 +208,12 @@ export default function App() {
             <section
               className={`flex-1 overflow-auto ${page === "history" ? "p-0" : "p-4"}`}
             >
-              {currentPageComponent &&
-                currentPageComponent({
-                  selectedModel,
-                  contextLength,
-                  temperature,
-                  systemPrompt,
-                })}
+              {currentPageComponent?.({
+                selectedModel,
+                contextLength,
+                temperature,
+                systemPrompt,
+              })}
             </section>
 
             {/* Right Sidebar - only show for chat page */}

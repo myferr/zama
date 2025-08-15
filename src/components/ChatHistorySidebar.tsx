@@ -83,9 +83,15 @@ export function ChatHistorySidebar({
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* Backdrop */}
-      <div
+      <button
+        type="button"
         className="absolute inset-0 bg-black bg-opacity-50"
         onClick={onClose}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            onClose();
+          }
+        }}
       />
 
       {/* Sidebar */}
@@ -134,7 +140,9 @@ export function ChatHistorySidebar({
           ) : (
             <div className="p-2">
               {conversations.map((conversation) => (
-                <div
+                <button
+                  type="button"
+                  tabIndex={0}
                   key={conversation.id}
                   className={`p-3 mb-2 rounded-lg cursor-pointer transition-colors group border ${
                     currentConversationId === conversation.id
@@ -144,6 +152,12 @@ export function ChatHistorySidebar({
                   onClick={() => {
                     switchToConversation(conversation.id);
                     onClose();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      switchToConversation(conversation.id);
+                      onClose();
+                    }
                   }}
                 >
                   <div className="flex items-start justify-between">
@@ -238,7 +252,7 @@ export function ChatHistorySidebar({
                       </Button>
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

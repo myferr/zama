@@ -3,7 +3,7 @@ export interface OllamaModel {
   modified_at: string;
   size: number;
   digest: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export interface ListModelsResponse {
@@ -17,7 +17,7 @@ export interface ChatRequest {
     content: string;
   }[];
   stream?: boolean;
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
 }
 
 export interface ChatResponse {

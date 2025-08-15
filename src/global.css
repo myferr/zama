@@ -57,6 +57,10 @@
   --spacing: 0.25rem;
 }
 
+.light * {
+  color: black;
+}
+
 .dark {
   --background: rgb(14, 19, 24);
   --foreground: rgb(220, 220, 220);
@@ -90,10 +94,6 @@
   --sidebar-accent-foreground: oklch(0.9 0.05 300);
   --sidebar-border: rgb(25, 32, 38);
   --sidebar-ring: oklch(0.5 0.2 300);
-}
-
-.light * {
-  color: black;
 }
 
 @theme inline {
@@ -150,10 +150,11 @@
 }
 
 @layer base {
-  * {
+  :where(*) {
     @apply border-border outline-ring/50;
     transition: all 0.2s ease-in-out; /* Added for smooth animations */
   }
+
   body {
     @apply bg-background text-foreground;
   }

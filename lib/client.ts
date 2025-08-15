@@ -55,14 +55,14 @@ function validateChatRequest(request: ChatRequest): void {
   }
 }
 
-export class OllamaClient {
-  static async listModels(): Promise<ListModelsResponse> {
+export class OllamaClientClass {
+  async listModels(): Promise<ListModelsResponse> {
     const res = await fetch(`${OLLAMA_BASE}/api/tags`);
     if (!res.ok) throw new Error("Failed to list models");
     return res.json();
   }
 
-  static async pullModel({ name }: PullModelRequest): Promise<string> {
+  async pullModel({ name }: PullModelRequest): Promise<string> {
     validateModelName(name);
     try {
       const response = await invoke<string>("pull_model", { modelName: name });
@@ -72,7 +72,7 @@ export class OllamaClient {
     }
   }
 
-  static async deleteModel({
+  async deleteModel({
     name,
   }: DeleteModelRequest): Promise<{ success: boolean }> {
     validateModelName(name);
@@ -97,9 +97,7 @@ export class OllamaClient {
     }
   }
 
-  static async showModel({
-    name,
-  }: ShowModelRequest): Promise<ShowModelResponse> {
+  async showModel({ name }: ShowModelRequest): Promise<ShowModelResponse> {
     validateModelName(name);
     const res = await fetch(`${OLLAMA_BASE}/api/show`, {
       method: "POST",
@@ -110,13 +108,13 @@ export class OllamaClient {
     return res.json();
   }
 
-  static async getConfig(): Promise<ConfigResponse> {
+  async getConfig(): Promise<ConfigResponse> {
     const res = await fetch(`${OLLAMA_BASE}/api/config`);
     if (!res.ok) throw new Error("Failed to get config");
     return res.json();
   }
 
-  static async chat(request: ChatRequest): Promise<ChatResponse[]> {
+  async chat(request: ChatRequest): Promise<ChatResponse[]> {
     validateChatRequest(request);
     const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: "POST",
@@ -150,7 +148,7 @@ export class OllamaClient {
     return messages;
   }
 
-  static async *chatStream(request: ChatRequest): AsyncGenerator<ChatResponse> {
+  async *chatStream(request: ChatRequest): AsyncGenerator<ChatResponse> {
     validateChatRequest(request);
     const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: "POST",

@@ -46,7 +46,7 @@ function generateConversationId(): string {
 function generateTitleFromMessage(content: string): string {
   // Create a title from the first user message, truncated to ~40 chars
   const cleaned = content.trim().replace(/\s+/g, " ");
-  return cleaned.length > 40 ? cleaned.substring(0, 40) + "..." : cleaned;
+  return cleaned.length > 40 ? `${cleaned.substring(0, 40)}...` : cleaned;
 }
 
 export function ChatHistoryProvider({

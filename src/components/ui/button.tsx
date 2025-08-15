@@ -43,12 +43,24 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
+    if (asChild) {
+      // Slot expects ref to be Ref<HTMLElement>, but our ref is Ref<HTMLButtonElement>
+      // To avoid type incompatibility, we omit ref for Slot and let the consumer handle it if needed
+      // Also, remove ref from props before spreading into Slot
+      const { ref: _ref, ...slotProps } = props;
+      return (
+        <Slot
+          data-slot="button"
+          className={cn(buttonVariants({ variant, size, className }))}
+          {...slotProps}
+        />
+      );
+    }
     return (
-      <Comp
+      <button
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref as any} // Cast ref to any
+        ref={ref}
         {...props}
       />
     );
