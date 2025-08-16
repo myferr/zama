@@ -10,8 +10,6 @@
 ![Repo Size](https://img.shields.io/github/repo-size/myferr/zama?logo=github&style=for-the-badge)
 ![Built with](https://img.shields.io/badge/built%20with-Tauri-blue?logo=tauri&style=for-the-badge)
 ![Frontend](https://img.shields.io/badge/frontend-Preact-673AB8?logo=preact&style=for-the-badge)
-[![Build](https://github.com/myferr/zama/actions/workflows/build.yml/badge.svg)](https://github.com/myferr/zama/actions/workflows/build.yml)
-[![Biome lint](https://github.com/myferr/zama/actions/workflows/biome.yml/badge.svg)](https://github.com/myferr/zama/actions/workflows/biome.yml)
 ![Biome](https://img.shields.io/badge/codebase_uses-Biome-60A5FA?logo=biome&style=for-the-badge)
 ![Husky](https://img.shields.io/badge/codebase_uses-Husky-purple?logo=github&style=for-the-badge)
 
@@ -20,6 +18,11 @@
 Zama is a cross-platform lightweight desktop application to manage and chat with local large language models using Ollama, it's built with Tauri and Preact.
 
 The only feature that requires you to be connected to the internet is **model lookup** and **model installation**.
+
+### Workflows
+**Build:** [![Build](https://github.com/myferr/zama/actions/workflows/build.yml/badge.svg)](https://github.com/myferr/zama/actions/workflows/build.yml)
+
+**Lint:** [![Biome lint](https://github.com/myferr/zama/actions/workflows/biome.yml/badge.svg)](https://github.com/myferr/zama/actions/workflows/biome.yml)
 
 ### Features
 * Browse model library
