@@ -7,6 +7,7 @@ import type {
   ShowModelResponse,
   ListModelsResponse,
   ConfigResponse,
+  GeminiContent,
 } from "./schemas/client.schema";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -175,6 +176,25 @@ export class OllamaClientClass {
       throw new Error(`Failed to invoke chat_ollama: ${error}`);
     } finally {
       unsubscribe();
+    }
+  }
+}
+
+export class GeminiClientClass {
+  async chat(
+    apiKey: string,
+    modelName: string,
+    messages: GeminiContent[],
+  ): Promise<string> {
+    try {
+      const response = await invoke<string>("send_gemini_chat", {
+        apiKey,
+        modelName,
+        messages,
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to send chat to Gemini: ${error}`);
     }
   }
 }

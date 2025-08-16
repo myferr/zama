@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useChatHistory, type Message } from "@/contexts/ChatHistoryContext";
-import { OllamaClientClass } from "$/lib/client";
-import type { ChatRequest } from "$/lib/schemas/client.schema";
+import { OllamaClientClass, GeminiClientClass } from "$/lib/client";
+import type { ChatRequest, GeminiContent } from "$/lib/schemas/client.schema";
 import { SendHorizonal, Copy, Check, MessageCircle, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -24,6 +24,7 @@ import rust from "react-syntax-highlighter/dist/esm/languages/hljs/rust";
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
 
 const OllamaClient = new OllamaClientClass();
+const GeminiClient = new GeminiClientClass();
 
 SyntaxHighlighter.registerLanguage("javascript", javascript);
 SyntaxHighlighter.registerLanguage("python", python);
@@ -53,6 +54,8 @@ interface ChatPageProps {
   contextLength: number | null;
   temperature: number;
   systemPrompt: string;
+  geminiApiKey?: string;
+  selectedGeminiModel?: string;
 }
 
 export default function ChatPage({
@@ -95,6 +98,9 @@ export default function ChatPage({
       showToast("Please select a model first.", "error");
       return;
     }
+
+    // Determine service based on selected model
+    const isGeminiModel = modelName.startsWith("gemini");
 
     // Create new conversation if none exists or if model changed
     let conversationId = currentConversationId;
@@ -160,45 +166,97 @@ export default function ChatPage({
 
     try {
       let assistantResponse = "";
-      let thinkingBuffer = "";
-      let inThinkTag = false;
 
-      for await (const chunk of OllamaClient.chatStream({
-        model: modelName,
-        messages: messagesToSend,
-        options: {
-          num_ctx: contextLength || undefined,
-          temperature: temperature,
-        },
-      } as ChatRequest)) {
-        let content = chunk.message.content;
+      if (!isGeminiModel) {
+        // Ollama logic
+        let thinkingBuffer = "";
+        let inThinkTag = false;
 
-        if (inThinkTag) {
-          if (content.includes("</think>")) {
-            const parts = content.split("</think>");
-            thinkingBuffer += parts[0];
-            setThinkingContent(thinkingBuffer);
-            inThinkTag = false;
-            content = parts[1] || "";
-          } else {
-            thinkingBuffer += content;
-            setThinkingContent(thinkingBuffer);
-            continue;
+        for await (const chunk of OllamaClient.chatStream({
+          model: modelName,
+          messages: messagesToSend,
+          options: {
+            num_ctx: contextLength || undefined,
+            temperature: temperature,
+          },
+        } as ChatRequest)) {
+          let content = chunk.message.content;
+
+          if (inThinkTag) {
+            if (content.includes("</think>")) {
+              const parts = content.split("</think>");
+              thinkingBuffer += parts[0];
+              setThinkingContent(thinkingBuffer);
+              inThinkTag = false;
+              content = parts[1] || "";
+            } else {
+              thinkingBuffer += content;
+              setThinkingContent(thinkingBuffer);
+              continue;
+            }
           }
+
+          if (content.includes("<think>")) {
+            const parts = content.split("<think>");
+            assistantResponse += parts[0];
+            inThinkTag = true;
+            setIsThinking(true);
+            thinkingBuffer = parts[1] || "";
+            setThinkingContent(thinkingBuffer);
+          } else {
+            assistantResponse += content;
+          }
+
+          // Update the assistant message in the conversation
+          updateMessageInConversation(
+            conversationId,
+            assistantMessageIndex,
+            assistantResponse,
+          );
+        }
+      } else {
+        // Gemini logic
+        const geminiConfigString = localStorage.getItem("geminiConfig");
+        if (!geminiConfigString) {
+          showToast(
+            "Gemini not configured. Please go to Cloud LLMs page.",
+            "error",
+          );
+          setLoading(false);
+          return;
+        }
+        let geminiApiKey = "";
+        try {
+          const config = JSON.parse(geminiConfigString);
+          geminiApiKey = config.apiKey || "";
+        } catch (e) {
+          console.error("Failed to parse Gemini config from localStorage", e);
+          showToast(
+            "Invalid Gemini configuration. Please reconfigure.",
+            "error",
+          );
+          setLoading(false);
+          return;
         }
 
-        if (content.includes("<think>")) {
-          const parts = content.split("<think>");
-          assistantResponse += parts[0];
-          inThinkTag = true;
-          setIsThinking(true);
-          thinkingBuffer = parts[1] || "";
-          setThinkingContent(thinkingBuffer);
-        } else {
-          assistantResponse += content;
+        if (!geminiApiKey) {
+          showToast("Please enter your Gemini API Key.", "error");
+          setLoading(false);
+          return;
         }
 
-        // Update the assistant message in the conversation
+        const geminiMessages: GeminiContent[] = messagesToSend.map((msg) => ({
+          role: msg.role === "user" ? "user" : "model", // Gemini roles are 'user' and 'model'
+          parts: [{ text: msg.content }],
+        }));
+
+        const geminiResponse = await GeminiClient.chat(
+          geminiApiKey,
+          modelName, // Use modelName directly
+          geminiMessages,
+        );
+        assistantResponse = geminiResponse;
+
         updateMessageInConversation(
           conversationId,
           assistantMessageIndex,

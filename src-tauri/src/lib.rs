@@ -100,7 +100,88 @@ pub struct HfModel {
     // Add other fields as needed
 }
 
+// --- Google Gemini Schemas ---
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GeminiPart {
+    pub text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GeminiContent {
+    pub role: String,
+    pub parts: Vec<GeminiPart>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GeminiChatRequest {
+    pub contents: Vec<GeminiContent>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GeminiCandidate {
+    pub content: GeminiContent,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GeminiChatResponse {
+    pub candidates: Vec<GeminiCandidate>,
+}
+
 // --- End of Schemas ---
+
+#[tauri::command]
+async fn send_gemini_chat(
+    api_key: String,
+    model_name: String,
+    messages: Vec<GeminiContent>,
+) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model_name, api_key
+    );
+
+    let request_body = GeminiChatRequest {
+        contents: messages,
+    };
+
+    let res = client
+        .post(&url)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
+
+    let status = res.status();
+    let raw_response_text = res.text().await.map_err(|e| format!("Failed to read Gemini raw response text: {}", e))?;
+    println!("Raw Gemini API Response: {}", raw_response_text);
+
+    if !status.is_success() {
+        return Err(format!(
+            "Gemini API returned non-success status: {} - {}",
+            status, raw_response_text
+        ));
+    }
+
+    let gemini_response: GeminiChatResponse = serde_json::from_str(&raw_response_text)
+        .map_err(|e| format!("Failed to parse Gemini response: {} - Raw: {}", e, raw_response_text))?;
+
+    // Extract the text from the first candidate's first part
+    let response_text = gemini_response
+        .candidates
+        .get(0)
+        .and_then(|c| c.content.parts.get(0))
+        .map(|p| p.text.clone())
+        .unwrap_or_else(|| {
+            println!("Gemini response candidates or parts are empty.");
+            "No response from Gemini.".to_string()
+        });
+
+    println!("Extracted Gemini Response Text: {}", response_text);
+
+    Ok(response_text)
+}
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
@@ -445,7 +526,8 @@ pub fn run() {
             chat_ollama,
             pull_model,
             check_ollama_status,
-            list_hf_models
+            list_hf_models,
+            send_gemini_chat
         ])
         .setup(|_app| {
             #[cfg(desktop)]

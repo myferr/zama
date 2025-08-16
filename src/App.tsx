@@ -17,25 +17,23 @@ import { ChatHistoryProvider } from "@/contexts/ChatHistoryContext";
 
 import { OllamaClientClass } from "$/lib/client";
 import type { OllamaModel } from "$/lib/schemas/client.schema";
+
+const OllamaClient = new OllamaClientClass();
 import LibraryPage from "@/pages/LibraryPage";
+import CloudLLMsPage from "@/pages/CloudLLMsPage";
 
 import { VscLibrary } from "react-icons/vsc";
 import { SiRobotframework } from "react-icons/si";
 import { MdChatBubbleOutline } from "react-icons/md";
-import { History, Sun, Moon } from "lucide-react";
-
-const OllamaClient = new OllamaClientClass();
+import { History, Sun, Moon, Cloud } from "lucide-react";
 
 interface PageConfig {
   id: string;
   name: string;
   icon: preact.ComponentChildren;
-  component: (props: {
-    selectedModel: string | null;
-    contextLength: number | null;
-    temperature: number;
-    systemPrompt: string;
-  }) => preact.ComponentChildren;
+  component: (
+    props: preact.ComponentProps<typeof ChatPage>,
+  ) => preact.ComponentChildren;
 }
 
 const pageConfigs: PageConfig[] = [
@@ -43,19 +41,7 @@ const pageConfigs: PageConfig[] = [
     id: "chat",
     name: "Chat",
     icon: <MdChatBubbleOutline />,
-    component: ({
-      selectedModel,
-      contextLength,
-      temperature,
-      systemPrompt,
-    }) => (
-      <ChatPage
-        selectedModel={selectedModel}
-        contextLength={contextLength}
-        temperature={temperature}
-        systemPrompt={systemPrompt}
-      />
-    ),
+    component: (props) => <ChatPage {...props} />,
   },
   {
     id: "models",
@@ -74,6 +60,12 @@ const pageConfigs: PageConfig[] = [
     name: "History",
     icon: <History />,
     component: () => <HistoryPage />,
+  },
+  {
+    id: "cloud-llms",
+    name: "Cloud LLMs",
+    icon: <Cloud />,
+    component: () => <CloudLLMsPage />,
   },
 ];
 
@@ -111,16 +103,77 @@ export default function App() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      try {
-        // Fetch available models
-        const modelsResponse = await OllamaClient.listModels();
-        setAvailableModels(modelsResponse.models);
-        if (modelsResponse.models.length > 0) {
-          setSelectedModel(modelsResponse.models[0].name); // Select the first model by default
-          setLoadedModel({ name: modelsResponse.models[0].name });
-        }
+      let allModels: OllamaModel[] = [];
+      let defaultSelectedModel: string | null = null;
 
-        // Fetch model config
+      // Load Ollama models
+      try {
+        const modelsResponse = await OllamaClient.listModels();
+        allModels = allModels.concat(modelsResponse.models);
+      } catch (error) {
+        console.error("Failed to load Ollama models:", error);
+      }
+
+      // Load Gemini models if configured
+      const geminiConfigString = localStorage.getItem("geminiConfig");
+      if (geminiConfigString) {
+        try {
+          const geminiConfig = JSON.parse(geminiConfigString);
+          if (geminiConfig.apiKey && geminiConfig.defaultModel) {
+            // Add hardcoded Gemini models
+            const geminiModels = [
+              { name: "gemini-pro", modified_at: "", size: 0, digest: "" },
+              {
+                name: "gemini-pro-vision",
+                modified_at: "",
+                size: 0,
+                digest: "",
+              },
+              {
+                name: "gemini-1.5-flash",
+                modified_at: "",
+                size: 0,
+                digest: "",
+              },
+              { name: "gemini-1.5-pro", modified_at: "", size: 0, digest: "" },
+              {
+                name: "gemini-2.0-flash",
+                modified_at: "",
+                size: 0,
+                digest: "",
+              },
+              {
+                name: "gemini-2.5-flash",
+                modified_at: "",
+                size: 0,
+                digest: "",
+              },
+              { name: "gemini-2.5-pro", modified_at: "", size: 0, digest: "" },
+            ];
+            allModels = allModels.concat(geminiModels);
+            defaultSelectedModel = geminiConfig.defaultModel;
+          }
+        } catch (error) {
+          console.error(
+            "Failed to parse Gemini config from localStorage:",
+            error,
+          );
+          localStorage.removeItem("geminiConfig"); // Clear invalid config
+        }
+      }
+
+      setAvailableModels(allModels);
+
+      if (defaultSelectedModel) {
+        setSelectedModel(defaultSelectedModel);
+        setLoadedModel({ name: defaultSelectedModel });
+      } else if (allModels.length > 0) {
+        setSelectedModel(allModels[0].name);
+        setLoadedModel({ name: allModels[0].name });
+      }
+
+      // Fetch Ollama config if an Ollama model is selected initially
+      if (selectedModel && !selectedModel.startsWith("gemini")) {
         try {
           const configResponse = await OllamaClient.getConfig();
           setContextLength(configResponse.num_ctx);
@@ -131,17 +184,29 @@ export default function App() {
           );
           setContextLength(2048); // Set a reasonable default if config fails
         }
-      } catch (error) {
-        console.error("Failed to load initial data:", error);
       }
     };
 
     loadInitialData();
-  }, []);
+  }, [page]);
 
   const currentPageComponent = pageConfigs.find(
     (p) => p.id === page,
   )?.component;
+
+  const geminiConfigString = localStorage.getItem("geminiConfig");
+  let geminiApiKey: string = "";
+  let selectedGeminiModel: string = "";
+
+  if (geminiConfigString) {
+    try {
+      const config = JSON.parse(geminiConfigString);
+      geminiApiKey = config.apiKey || "";
+      selectedGeminiModel = config.defaultModel || "";
+    } catch (e) {
+      console.error("Failed to parse Gemini config for ChatPage props", e);
+    }
+  }
 
   return (
     <ChatHistoryProvider>
@@ -213,6 +278,8 @@ export default function App() {
                 contextLength,
                 temperature,
                 systemPrompt,
+                geminiApiKey,
+                selectedGeminiModel,
               })}
             </section>
 

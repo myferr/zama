@@ -57,3 +57,12 @@ export interface ConfigResponse {
   numa: boolean;
   seed: number;
 }
+
+export interface GeminiPart {
+  text: string;
+}
+
+export interface GeminiContent {
+  role: string;
+  parts: GeminiPart[];
+}
