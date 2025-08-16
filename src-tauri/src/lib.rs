@@ -142,9 +142,7 @@ async fn send_gemini_chat(
         model_name, api_key
     );
 
-    let request_body = GeminiChatRequest {
-        contents: messages,
-    };
+    let request_body = GeminiChatRequest { contents: messages };
 
     let res = client
         .post(&url)
@@ -154,7 +152,10 @@ async fn send_gemini_chat(
         .map_err(|e| format!("Failed to send request to Gemini: {}", e))?;
 
     let status = res.status();
-    let raw_response_text = res.text().await.map_err(|e| format!("Failed to read Gemini raw response text: {}", e))?;
+    let raw_response_text = res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read Gemini raw response text: {}", e))?;
     println!("Raw Gemini API Response: {}", raw_response_text);
 
     if !status.is_success() {
@@ -164,8 +165,13 @@ async fn send_gemini_chat(
         ));
     }
 
-    let gemini_response: GeminiChatResponse = serde_json::from_str(&raw_response_text)
-        .map_err(|e| format!("Failed to parse Gemini response: {} - Raw: {}", e, raw_response_text))?;
+    let gemini_response: GeminiChatResponse =
+        serde_json::from_str(&raw_response_text).map_err(|e| {
+            format!(
+                "Failed to parse Gemini response: {} - Raw: {}",
+                e, raw_response_text
+            )
+        })?;
 
     // Extract the text from the first candidate's first part
     let response_text = gemini_response
@@ -413,6 +419,33 @@ fn validate_model_name(name: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn get_ollama_models() -> Result<String, String> {
+    println!("Attempting to fetch models from ollamadb.dev...");
+    let res = reqwest::get("https://ollamadb.dev/api/v1/models?limit=200&skip=0")
+        .await
+        .map_err(|e| {
+            eprintln!("Error fetching from ollamadb.dev: {}", e);
+            format!("Failed to fetch from ollamadb.dev: {}", e.to_string())
+        })?;
+
+    println!(
+        "Received response from ollamadb.dev with status: {}",
+        res.status()
+    );
+    if !res.status().is_success() {
+        let status = res.status();
+        let error_msg = format!("OllamaDB API returned non-success status: {}", status);
+        eprintln!("{}", error_msg);
+        return Err(error_msg);
+    }
+
+    res.text().await.map_err(|e| {
+        eprintln!("Error reading response text: {}", e);
+        format!("Failed to read response text: {}", e.to_string())
+    })
+}
+
+#[tauri::command]
 async fn pull_model(model_name: String) -> Result<String, String> {
     // Validate input
     validate_model_name(&model_name)?;
@@ -519,6 +552,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            get_ollama_models,
             list_ollama_models,
             delete_ollama_model,
             show_ollama_model,
