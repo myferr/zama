@@ -71,6 +71,8 @@ export default function ChatPage({
   );
   const [thinkingContent, setThinkingContent] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [streamingAssistantContent, setStreamingAssistantContent] =
+    useState(""); // New state for streaming content
   const containerRef = useRef<HTMLDivElement>(null);
   const { showToast, ToastComponent } = useToast();
 
@@ -124,6 +126,7 @@ export default function ChatPage({
     setLoading(true);
     setIsThinking(false);
     setThinkingContent("");
+    setStreamingAssistantContent(""); // Initialize streaming content
 
     // Calculate the position where the assistant message will be added
     const currentMessageCount = conversationToUse?.messages.length || 0;
@@ -165,7 +168,7 @@ export default function ChatPage({
     addMessageToConversation(conversationId, assistantMessage);
 
     try {
-      let assistantResponse = "";
+      let assistantResponse = ""; // This will accumulate the final response
 
       if (!isGeminiModel) {
         // Ollama logic
@@ -198,22 +201,24 @@ export default function ChatPage({
 
           if (content.includes("<think>")) {
             const parts = content.split("<think>");
-            assistantResponse += parts[0];
+            assistantResponse += parts[0]; // Add pre-<think> content to final response
             inThinkTag = true;
             setIsThinking(true);
             thinkingBuffer = parts[1] || "";
             setThinkingContent(thinkingBuffer);
           } else {
-            assistantResponse += content;
+            assistantResponse += content; // Accumulate content for final response
           }
 
-          // Update the assistant message in the conversation
-          updateMessageInConversation(
-            conversationId,
-            assistantMessageIndex,
-            assistantResponse,
-          );
+          // Update the streaming content for immediate display
+          setStreamingAssistantContent(assistantResponse);
         }
+        // After streaming is complete, update the conversation with the final response
+        updateMessageInConversation(
+          conversationId,
+          assistantMessageIndex,
+          assistantResponse,
+        );
       } else {
         // Gemini logic
         const geminiConfigString = localStorage.getItem("geminiConfig");
@@ -276,6 +281,7 @@ export default function ChatPage({
     } finally {
       setLoading(false);
       setIsThinking(false);
+      setStreamingAssistantContent(""); // Clear streaming content after completion/error
     }
   };
 
@@ -464,8 +470,9 @@ export default function ChatPage({
                         ),
                       }}
                     >
-                      {message.content ||
-                        (loading && index === messages.length - 1 ? "..." : "")}
+                      {loading && index === messages.length - 1
+                        ? streamingAssistantContent || "..."
+                        : message.content}
                     </ReactMarkdown>
                   </div>
                 ) : (

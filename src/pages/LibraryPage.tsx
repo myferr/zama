@@ -1,8 +1,6 @@
 /** @jsxImportSource preact */
 import { useEffect, useState } from "preact/hooks";
-import type { OllamaDBModel } from "$/lib/schemas/ollamadb.schema";
 import type { HfModel } from "$/lib/schemas/hf.schema";
-import { invoke } from "@tauri-apps/api/core";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -66,18 +64,17 @@ export default function LibraryPage() {
         let fetchedModels: UnifiedModel[] = [];
 
         if (provider === "ollama") {
-          const res = await invoke<string>("get_ollama_models");
-          const json = JSON.parse(res);
-          fetchedModels = json.models.map((model: OllamaDBModel) => ({
-            id: model.model_identifier,
-            name: model.model_name,
-            description: model.description,
-            pulls: model.pulls,
-            tags: model.tags,
-            labels: model.labels,
-            url: model.url,
+          const res = await OllamaClient.listModels();
+          fetchedModels = res.models.map((model) => ({
+            id: model.name,
+            name: model.name,
+            description: (model.details?.description as string) || undefined,
+            pulls: (model.details?.pulls as number) || undefined,
+            tags: (model.details?.tags as string[]) || undefined,
+            labels: (model.details?.labels as string[]) || undefined,
+            url: `http://localhost:11434/api/tags/${model.name}`,
             provider: "ollama",
-            isOfficial: model.model_type === "official",
+            isOfficial: false,
           }));
         } else {
           const hfModels = await HfClient.listModels(query || "GGUF");

@@ -158,7 +158,9 @@ export class OllamaClientClass {
     });
 
     try {
-      await invoke<void>("chat_ollama", { request });
+      await invoke<void>("chat_ollama", {
+        request: { ...request, stream: true },
+      });
 
       while (true) {
         if (eventQueue.length > 0) {
