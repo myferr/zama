@@ -1,40 +1,309 @@
+use futures::StreamExt;
+use serde::{Deserialize, Serialize};
+use tauri::Emitter;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command as TokioCommand;
 use tokio::time::{timeout, Duration};
 
 mod updater;
 
+const OLLAMA_BASE_URL: &str = "http://localhost:11434";
+const HF_BASE_URL: &str = "https://huggingface.co";
+
+// --- Ollama Client Schemas ---
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Message {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ChatRequest {
+    pub model: String,
+    pub messages: Vec<Message>,
+    pub stream: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChatResponse {
+    pub model: String,
+    pub created_at: String,
+    pub message: Option<Message>, // Message might be null for done: true responses
+    pub done: bool,
+    // Add other optional fields if needed, eg., total_duration, load_duration
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PullModelRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeleteModelRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShowModelRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ModelDetails {
+    pub parent_model: Option<String>,
+    pub format: String,
+    pub family: String,
+    pub families: Option<Vec<String>>,
+    pub parameter_size: String,
+    pub quantization_level: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShowModelResponse {
+    pub model: String,
+    pub license: String,
+    pub modelfile: String,
+    pub parameters: Vec<String>,
+    pub template: String,
+    pub details: ModelDetails,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ListModelEntry {
+    pub name: String,
+    pub modified_at: String,
+    pub size: u64,
+    pub digest: String,
+    pub details: ModelDetails,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ListModelsResponse {
+    pub models: Vec<ListModelEntry>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConfigResponse {
+    pub ollama_url: String, // Assuming this is the only field for now
+}
+
+// --- Hugging Face Client Schemas ---
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HfModel {
+    pub model_id: String,
+    pub pipeline_tag: Option<String>,
+    pub downloads: Option<u64>,
+    pub last_modified: Option<String>,
+    // Add other fields as needed
+}
+
+// --- End of Schemas ---
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+async fn list_ollama_models() -> Result<ListModelsResponse, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/tags", OLLAMA_BASE_URL);
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send request to Ollama: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!(
+            "Ollama API returned non-success status: {} - {}",
+            status, error_text
+        ));
+    }
+
+    res.json::<ListModelsResponse>()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama models response: {}", e))
 }
 
 #[tauri::command]
-async fn get_ollama_models() -> Result<String, String> {
-    println!("Attempting to fetch models from ollamadb.dev...");
-    let res = reqwest::get("https://ollamadb.dev/api/v1/models?limit=200&skip=0")
+async fn delete_ollama_model(request: DeleteModelRequest) -> Result<String, String> {
+    validate_model_name(&request.name)?;
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/delete", OLLAMA_BASE_URL);
+    let res = client
+        .delete(&url)
+        .json(&request)
+        .send()
         .await
-        .map_err(|e| {
-            eprintln!("Error fetching from ollamadb.dev: {}", e);
-            format!("Failed to fetch from ollamadb.dev: {}", e.to_string())
-        })?;
+        .map_err(|e| format!("Failed to send request to Ollama: {}", e))?;
 
-    println!(
-        "Received response from ollamadb.dev with status: {}",
-        res.status()
-    );
     if !res.status().is_success() {
         let status = res.status();
-        let error_msg = format!("OllamaDB API returned non-success status: {}", status);
-        eprintln!("{}", error_msg);
-        return Err(error_msg);
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!(
+            "Ollama API returned non-success status: {} - {}",
+            status, error_text
+        ));
     }
 
-    res.text().await.map_err(|e| {
-        eprintln!("Error reading response text: {}", e);
-        format!("Failed to read response text: {}", e.to_string())
-    })
+    Ok("Model deleted successfully".to_string())
+}
+
+#[tauri::command]
+async fn show_ollama_model(request: ShowModelRequest) -> Result<ShowModelResponse, String> {
+    validate_model_name(&request.name)?;
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/show", OLLAMA_BASE_URL);
+    let res = client
+        .post(&url)
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send request to Ollama: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!(
+            "Ollama API returned non-success status: {} - {}",
+            status, error_text
+        ));
+    }
+
+    res.json::<ShowModelResponse>()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama show model response: {}", e))
+}
+
+#[tauri::command]
+async fn get_ollama_config() -> Result<ConfigResponse, String> {
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/config", OLLAMA_BASE_URL);
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send request to Ollama: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!(
+            "Ollama API returned non-success status: {} - {}",
+            status, error_text
+        ));
+    }
+
+    res.json::<ConfigResponse>()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama config response: {}", e))
+}
+
+#[tauri::command]
+async fn chat_ollama(app_handle: tauri::AppHandle, request: ChatRequest) -> Result<(), String> {
+    validate_model_name(&request.model)?;
+    if request.messages.is_empty() {
+        return Err("Chat request must include at least one message".to_string());
+    }
+
+    let client = reqwest::Client::new();
+    let url = format!("{}/api/chat", OLLAMA_BASE_URL);
+
+    let mut stream_request = request.clone();
+    stream_request.stream = true; // Ensure streaming is enabled for the API call
+
+    let res = client
+        .post(&url)
+        .json(&stream_request)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send chat request to Ollama: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!(
+            "Ollama API returned non-success status: {} - {}",
+            status, error_text
+        ));
+    }
+
+    let mut stream = res.bytes_stream();
+
+    while let Some(chunk_result) = stream.next().await {
+        let chunk = chunk_result.map_err(|e| format!("Error reading stream: {}", e))?;
+        let chunk_str = String::from_utf8_lossy(&chunk);
+
+        for line in chunk_str.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            match serde_json::from_str::<ChatResponse>(line) {
+                Ok(chat_response) => {
+                    // Emit each chat response chunk as a Tauri event
+                    app_handle
+                        .emit("ollama-chat-chunk", chat_response)
+                        .map_err(|e| format!("Failed to emit event: {}", e))?;
+                }
+                Err(e) => {
+                    eprintln!("Failed to parse chat response chunk: {} - {}", e, line);
+                    // Optionally, emit an error event or handle it differently
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn list_hf_models(search: Option<String>) -> Result<Vec<HfModel>, String> {
+    let client = reqwest::Client::new();
+    let search_query = search.unwrap_or_else(|| "GGUF".to_string());
+    let url = format!(
+        "{}/api/models?search={}&pipeline_tag=text-generation&sort=downloads&direction=-1&limit=100",
+        HF_BASE_URL, search_query
+    );
+
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to send request to Hugging Face: {}", e))?;
+
+    if !res.status().is_success() {
+        let status = res.status();
+        let error_text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string());
+        return Err(format!(
+            "Hugging Face API returned non-success status: {} - {}",
+            status, error_text
+        ));
+    }
+
+    res.json::<Vec<HfModel>>()
+        .await
+        .map_err(|e| format!("Failed to parse Hugging Face models response: {}", e))
 }
 
 // Input validation helper
@@ -169,10 +438,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            greet,
-            get_ollama_models,
+            list_ollama_models,
+            delete_ollama_model,
+            show_ollama_model,
+            get_ollama_config,
+            chat_ollama,
             pull_model,
-            check_ollama_status
+            check_ollama_status,
+            list_hf_models
         ])
         .setup(|_app| {
             #[cfg(desktop)]

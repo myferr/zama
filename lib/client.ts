@@ -9,8 +9,7 @@ import type {
   ConfigResponse,
 } from "./schemas/client.schema";
 import { invoke } from "@tauri-apps/api/core";
-
-const OLLAMA_BASE = "http://localhost:11434";
+import { listen } from "@tauri-apps/api/event";
 
 // Input validation helpers
 function validateModelName(name: string): void {
@@ -57,9 +56,12 @@ function validateChatRequest(request: ChatRequest): void {
 
 export class OllamaClientClass {
   async listModels(): Promise<ListModelsResponse> {
-    const res = await fetch(`${OLLAMA_BASE}/api/tags`);
-    if (!res.ok) throw new Error("Failed to list models");
-    return res.json();
+    try {
+      const response = await invoke<ListModelsResponse>("list_ollama_models");
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to list models: ${error}`);
+    }
   }
 
   async pullModel({ name }: PullModelRequest): Promise<string> {
@@ -76,106 +78,103 @@ export class OllamaClientClass {
     name,
   }: DeleteModelRequest): Promise<{ success: boolean }> {
     validateModelName(name);
-    const res = await fetch(`${OLLAMA_BASE}/api/delete`, {
-      method: "DELETE",
-      body: JSON.stringify({ name }),
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`Failed to delete model: ${errText}`);
-    }
-
-    const text = await res.text();
-    if (!text) return { success: true }; // empty response = success
-
     try {
-      return JSON.parse(text);
-    } catch {
-      return { success: true }; // fallback if non-JSON response
+      await invoke<string>("delete_ollama_model", {
+        request: { name },
+      });
+      return { success: true }; // Rust command returns string on success
+    } catch (error) {
+      throw new Error(`Failed to delete model: ${error}`);
     }
   }
 
   async showModel({ name }: ShowModelRequest): Promise<ShowModelResponse> {
     validateModelName(name);
-    const res = await fetch(`${OLLAMA_BASE}/api/show`, {
-      method: "POST",
-      body: JSON.stringify({ name }),
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) throw new Error("Failed to show model");
-    return res.json();
+    try {
+      const response = await invoke<ShowModelResponse>("show_ollama_model", {
+        request: { name },
+      });
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to show model: ${error}`);
+    }
   }
 
   async getConfig(): Promise<ConfigResponse> {
-    const res = await fetch(`${OLLAMA_BASE}/api/config`);
-    if (!res.ok) throw new Error("Failed to get config");
-    return res.json();
+    try {
+      const response = await invoke<ConfigResponse>("get_ollama_config");
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to get config: ${error}`);
+    }
   }
 
   async chat(request: ChatRequest): Promise<ChatResponse[]> {
     validateChatRequest(request);
-    const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
-      method: "POST",
-      body: JSON.stringify(request),
-      headers: { "Content-Type": "application/json" },
+    const messages: ChatResponse[] = [];
+    let unsubscribe: (() => void) | undefined;
+
+    const promise = new Promise<void>((resolve, reject) => {
+      listen<ChatResponse>("ollama-chat-chunk", (event) => {
+        messages.push(event.payload);
+        if (event.payload.done) {
+          resolve();
+        }
+      })
+        .then((unsub) => {
+          unsubscribe = unsub;
+          return invoke<void>("chat_ollama", { request });
+        })
+        .catch((error) => {
+          reject(new Error(`Failed to invoke chat_ollama: ${error}`));
+        });
     });
 
-    if (!res.ok) throw new Error("Chat request failed");
-
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error("No response body to read from");
-
-    const decoder = new TextDecoder();
-    const messages: ChatResponse[] = [];
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      for (const line of chunk.split("\n")) {
-        if (!line.trim()) continue;
-        try {
-          const parsed: ChatResponse = JSON.parse(line);
-          messages.push(parsed);
-        } catch {
-          // Ignore malformed lines (if any)
-        }
-      }
-    }
-
+    await promise;
+    unsubscribe?.();
     return messages;
   }
 
   async *chatStream(request: ChatRequest): AsyncGenerator<ChatResponse> {
     validateChatRequest(request);
-    const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
-      method: "POST",
-      body: JSON.stringify(request),
-      headers: { "Content-Type": "application/json" },
+    let unsubscribe: () => void;
+
+    const eventQueue: ChatResponse[] = [];
+    let resolvePromise: ((value?: unknown) => void) | null = null;
+    let dataAvailablePromise = new Promise((resolve) => {
+      resolvePromise = resolve;
     });
 
-    if (!res.ok) throw new Error("Chat request failed");
+    unsubscribe = await listen<ChatResponse>("ollama-chat-chunk", (event) => {
+      eventQueue.push(event.payload);
+      if (resolvePromise) {
+        resolvePromise();
+        resolvePromise = null;
+        dataAvailablePromise = new Promise((resolve) => {
+          resolvePromise = resolve;
+        });
+      }
+    });
 
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error("No response body to read from");
+    try {
+      await invoke<void>("chat_ollama", { request });
 
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      for (const line of chunk.split("\n")) {
-        if (!line.trim()) continue;
-        try {
-          const parsed: ChatResponse = JSON.parse(line);
-          yield parsed;
-        } catch {
-          // Ignore malformed lines (if any)
+      while (true) {
+        if (eventQueue.length > 0) {
+          const chunk = eventQueue.shift() as ChatResponse;
+          yield chunk;
+          if (chunk.done) {
+            break;
+          }
+        } else {
+          // Wait for new data if the queue is empty
+          await dataAvailablePromise;
         }
       }
+    } catch (error) {
+      throw new Error(`Failed to invoke chat_ollama: ${error}`);
+    } finally {
+      unsubscribe();
     }
   }
 }
