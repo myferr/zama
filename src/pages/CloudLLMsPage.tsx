@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2 } from "lucide-react";
+import { RiGeminiFill } from "react-icons/ri";
 
 interface GeminiConfig {
   apiKey: string;
@@ -75,7 +76,10 @@ export default function CloudLLMsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Google Gemini</CardTitle>
+          <CardTitle className={"flex gap-2 items-center"}>
+            <RiGeminiFill />
+            Google Gemini
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

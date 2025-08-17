@@ -15,7 +15,6 @@
     "loc": "rm LOC && tokei > LOC && echo \"Updated LOC. \"",
     "lint": "biome lint .",
     "format": "biome format --write .",
-
     "check": "biome format --write ."
   },
   "dependencies": {
