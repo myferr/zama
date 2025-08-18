@@ -1,6 +1,8 @@
 /** @jsxImportSource preact */
 import { useEffect, useState } from "preact/hooks";
+import type { OllamaDBModel } from "$/lib/schemas/ollamadb.schema";
 import type { HfModel } from "$/lib/schemas/hf.schema";
+import { invoke } from "@tauri-apps/api/core";
 import { Input } from "@/components/ui/input";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -20,16 +22,12 @@ import { OllamaClientClass } from "$/lib/client";
 import { HfClientClass } from "$/lib/hf-client";
 import { SiHuggingface } from "react-icons/si";
 
-const OllamaClient = new OllamaClientClass();
-
-const HfClient = new HfClientClass();
-
 type UnifiedModel = {
   id: string;
   name: string;
   description?: string;
   pulls?: number;
-  tags?: string[];
+  tags?: string[] | number;
   labels?: string[];
   url: string;
   provider: "ollama" | "huggingface";
@@ -39,6 +37,9 @@ type UnifiedModel = {
   downloads?: number;
   likes?: number;
 };
+
+const HfClient = new HfClientClass();
+const OllamaClient = new OllamaClientClass();
 
 export default function LibraryPage() {
   const [models, setModels] = useState<UnifiedModel[]>([]);
@@ -64,17 +65,18 @@ export default function LibraryPage() {
         let fetchedModels: UnifiedModel[] = [];
 
         if (provider === "ollama") {
-          const res = await OllamaClient.listModels();
-          fetchedModels = res.models.map((model) => ({
-            id: model.name,
-            name: model.name,
-            description: (model.details?.description as string) || undefined,
-            pulls: (model.details?.pulls as number) || undefined,
-            tags: (model.details?.tags as string[]) || undefined,
-            labels: (model.details?.labels as string[]) || undefined,
-            url: `http://localhost:11434/api/tags/${model.name}`,
+          const res = await invoke<string>("get_ollama_models");
+          const json = JSON.parse(res);
+          fetchedModels = json.models.map((model: OllamaDBModel) => ({
+            id: model.model_identifier,
+            name: model.model_name,
+            description: model.description,
+            pulls: model.pulls,
+            tags: model.tags,
+            labels: model.labels,
+            url: model.url,
             provider: "ollama",
-            isOfficial: false,
+            isOfficial: model.model_type === "official",
           }));
         } else {
           const hfModels = await HfClient.listModels(query || "GGUF");
@@ -224,7 +226,7 @@ export default function LibraryPage() {
                     </a>
                     {model.isOfficial && <BiBadgeCheck />}
                     <button
-                      type="button"
+                      type={"button"}
                       className={`${
                         pullingModel === model.name ||
                         installedModels.has(getBaseModelName(model.name))
